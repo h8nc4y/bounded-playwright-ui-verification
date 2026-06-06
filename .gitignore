@@ -1,0 +1,11 @@
+.ui-verification/
+node_modules/
+playwright-report/
+test-results/
+coverage/
+dist/
+build/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
