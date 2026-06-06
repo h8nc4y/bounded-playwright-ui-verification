@@ -37,8 +37,27 @@ $literalMarkers = @(
 )
 
 $emailRegex = [regex]'[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}'
-$windowsPathRegex = [regex]'[A-Za-z]:\\[^\s"''<>|]+'
+$windowsPathRegex = [regex]'(?<![A-Za-z0-9_])[A-Za-z]:\\[^\s"''<>|]+'
 $githubRepoUrlRegex = [regex]'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?'
+
+function Get-RelativePath {
+  param(
+    [string]$BasePath,
+    [string]$TargetPath
+  )
+
+  $baseFullPath = [System.IO.Path]::GetFullPath($BasePath)
+  $targetFullPath = [System.IO.Path]::GetFullPath($TargetPath)
+
+  if (-not $baseFullPath.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+    $baseFullPath += [System.IO.Path]::DirectorySeparatorChar
+  }
+
+  $baseUri = New-Object System.Uri($baseFullPath)
+  $targetUri = New-Object System.Uri($targetFullPath)
+  $relativeUri = $baseUri.MakeRelativeUri($targetUri)
+  return [System.Uri]::UnescapeDataString($relativeUri.ToString()).Replace("/", [System.IO.Path]::DirectorySeparatorChar)
+}
 
 function Add-Finding {
   param(
@@ -66,14 +85,14 @@ function Test-SelfMarkerLine {
 }
 
 $files = Get-ChildItem -LiteralPath $scanRoot -Recurse -File -Force | Where-Object {
-  $relative = [System.IO.Path]::GetRelativePath($scanRoot, $_.FullName)
+  $relative = Get-RelativePath -BasePath $scanRoot.Path -TargetPath $_.FullName
   $parts = $relative -split '[\\/]'
   -not ($parts | Where-Object { $excludedDirectories -contains $_ })
 }
 
 foreach ($file in $files) {
-  $relativePath = [System.IO.Path]::GetRelativePath($scanRoot, $file.FullName)
-  $lines = Get-Content -LiteralPath $file.FullName
+  $relativePath = Get-RelativePath -BasePath $scanRoot.Path -TargetPath $file.FullName
+  $lines = Get-Content -LiteralPath $file.FullName -Encoding UTF8
 
   for ($i = 0; $i -lt $lines.Count; $i++) {
     $line = $lines[$i]

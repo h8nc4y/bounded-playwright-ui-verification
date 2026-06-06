@@ -1,12 +1,13 @@
 # bounded-playwright-ui-verification
 
-`bounded-playwright-ui-verification` is a Codex-style skill for AI coding agents that
-need to verify Web UI with real browser evidence without hanging on foreground dev
-servers, inventing screenshot checks, or leaving local servers running.
+[![CI](https://github.com/h8nc4y/bounded-playwright-ui-verification/actions/workflows/ci.yml/badge.svg)](https://github.com/h8nc4y/bounded-playwright-ui-verification/actions/workflows/ci.yml)
 
-The skill is about bounded verification operations, not Playwright branding or assets.
-It does not vendor Playwright, browser binaries, screenshots, icons, or third-party
-media.
+`bounded-playwright-ui-verification` is a Codex-style skill for AI coding agents
+that need real browser evidence for Web UI changes while keeping local server
+workflows bounded and cleanup explicit.
+
+The skill is about operational discipline. It does not vendor Playwright,
+browser binaries, screenshots, icons, or third-party media.
 
 ## Who It Is For
 
@@ -18,11 +19,12 @@ media.
 
 ## What It Solves
 
-- Foreground `npm run dev`, Vite, Next.js, or similar servers blocking the agent turn.
+- Foreground `npm run dev`, Vite, Next.js, or similar servers blocking an agent
+  turn.
 - Unbounded waits, infinite polling, and forgotten cleanup.
 - UI signoff based only on compile, lint, typecheck, or build output.
-- Reports that claim screenshots, console checks, network checks, or responsive checks
-  that were not actually performed.
+- Reports that claim screenshots, console checks, network checks, or responsive
+  checks that were not actually performed.
 - Missing evidence for 390 px, 768 px, and 1280 px-plus viewport checks.
 
 ## Install
@@ -31,6 +33,15 @@ Clone the repository:
 
 ```powershell
 git clone https://github.com/h8nc4y/bounded-playwright-ui-verification.git
+cd bounded-playwright-ui-verification
+```
+
+Run the repository checks before copying the skill:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
+git diff --check
 ```
 
 Manual install into a Codex-style skill directory:
@@ -52,13 +63,13 @@ Copy-Item -LiteralPath ".\SKILL.md" -Destination (Join-Path $target "SKILL.md")
 ```
 
 If your agent runtime uses a different skill location, copy `SKILL.md` into the
-runtime's documented skill folder. Do not overwrite an existing skill folder without
-reviewing local changes first.
+runtime's documented skill folder. Review local changes before overwriting an
+existing skill folder.
 
 ## Manual Use
 
-Invoke the skill before finishing Web UI work when browser verification is relevant.
-Use it to plan and report:
+Invoke the skill before finishing Web UI work when browser verification is
+relevant. Use it to plan and report:
 
 - Background dev server startup with PID and log capture.
 - Bounded health checks.
@@ -73,28 +84,39 @@ Use it to plan and report:
 - [Final report template](examples/final-report-template.md)
 - [Bounded server runbook](examples/server-runbook.md)
 
-All examples are synthetic. They do not include private logs, screenshots, tokens, or
-customer data.
+All examples are synthetic. They do not include private logs, screenshots,
+tokens, auth cookies, or customer data.
 
 ## Validation And Scan
 
-Run the private marker scan before publishing or copying the skill:
+Run all local checks before publishing, copying, or opening a pull request:
 
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
-```
-
-Run your environment's skill validator if one is available. For example:
-
-```powershell
-python path\to\quick_validate.py
-```
-
-Also run a whitespace check before committing:
-
-```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
 git diff --check
 ```
+
+`scan-private-markers.ps1` blocks common secret prefixes, private path markers,
+unexpected GitHub repository links, email-like values, and absolute Windows path
+leaks. `assert-oss-ready.ps1` checks the skill front matter, required public
+project files, required README sections, broken local Markdown links, mojibake,
+and placeholder markers.
+
+Use your agent runtime's skill validator as an additional check when one is
+available.
+
+## Contributing
+
+Contributions are welcome when they keep the skill focused on bounded,
+truthful UI verification. See [CONTRIBUTING.md](CONTRIBUTING.md) for the local
+development loop, pull request expectations, and review criteria.
+
+## Security
+
+This project is designed to prevent accidental over-claiming and private-data
+leakage in verification reports, but it is not a general-purpose security tool.
+See [SECURITY.md](SECURITY.md) for reporting guidance and supported scope.
 
 ## Limitations
 
@@ -102,14 +124,14 @@ git diff --check
   research, or manual product acceptance testing.
 - It cannot verify authenticated or protected states without a safe authenticated
   environment.
-- It does not install Playwright or browsers by itself.
-- Console and network checks depend on the capabilities of the browser automation
-  tool available in the agent environment.
+- It does not install Playwright, browser binaries, or browsers by itself.
+- Console and network checks depend on the capabilities of the browser
+  automation tool available in the agent environment.
 
 ## Non-Goals
 
 - No Playwright icon assets, screenshots, or third-party media.
-- No package publishing.
+- No package publishing workflow.
 - No GitHub Marketplace listing.
 - No GitHub Release workflow.
 - No paid API, model, or SaaS dependency.
@@ -117,8 +139,8 @@ git diff --check
 ## Safety Notes
 
 - Use synthetic data in examples and tests.
-- Do not send secrets, OAuth credentials, auth cookies, customer data, or private logs
-  to external services.
+- Do not send secrets, OAuth credentials, auth cookies, customer data, or
+  private logs to external services.
 - Do not claim a verification category passed unless it was actually checked.
 - Mark unavailable or blocked checks as `未確認`.
 - Keep server startup, health checks, browser waits, and cleanup bounded.

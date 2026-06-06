@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate repository
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for private markers
+        shell: powershell
+        run: .\scripts\scan-private-markers.ps1
+
+      - name: Check OSS readiness
+        shell: powershell
+        run: .\scripts\assert-oss-ready.ps1
+
+      - name: Check whitespace in tracked files
+        shell: powershell
+        run: git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD

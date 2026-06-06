@@ -1,7 +1,7 @@
 # UI Verification Checklist
 
-Use this checklist for a synthetic or local Web UI target. Replace route names and
-commands with project-specific values.
+Use this checklist for a synthetic or local Web UI target. Replace route names
+and commands with project-specific values.
 
 ## Server
 

@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an improvement to bounded UI verification guidance.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep requests focused on bounded, truthful Web UI verification.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What verification gap or reporting risk does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the change you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you considered.
+    validations:
+      required: false
+  - type: dropdown
+    id: cost
+    attributes:
+      label: Cost impact
+      options:
+        - No paid service required
+        - May require paid service
+        - Unsure
+    validations:
+      required: true
