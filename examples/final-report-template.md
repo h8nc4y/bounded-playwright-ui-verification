@@ -47,5 +47,5 @@ Residual risks:
 - <risk>
 ```
 
-Only fill in categories you actually checked. Delete irrelevant categories or mark them
-`未確認`; do not claim planned verification as completed verification.
+Only fill in categories you actually checked. Delete irrelevant categories or mark
+them `未確認`; do not claim planned verification as completed verification.

@@ -1,0 +1,47 @@
+name: Bug report
+description: Report incorrect behavior in the skill, examples, or validation scripts.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not include secrets, auth cookies, private logs, or customer data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect the skill or script to do?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal commands, files, or steps using synthetic data.
+      render: markdown
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Agent runtime, OS, shell, and browser automation tool.
+    validations:
+      required: false
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks run
+      description: List local checks and their results.
+      render: markdown
+    validations:
+      required: false
