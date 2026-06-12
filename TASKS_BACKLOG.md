@@ -1,24 +1,26 @@
 # TASKS_BACKLOG.md
 
-## Backlog
+## バックログ
 
 | ID | タスク名 | 出典 | 優先度 | 規模 | 状態 |
 | --- | --- | --- | --- | --- | --- |
-| T-001 | 棚卸し結果を `TASKS_BACKLOG.md` に記録する | Current goal | 高 | S | done |
+| T-001 | 棚卸し結果を `TASKS_BACKLOG.md` に記録する | 2026-06-11 の棚卸し作業 | 高 | S | done |
+| T-002 | Claude Code 向けの引き継ぎ情報を `HANDOFF.md` に記録する | 2026-06-13 の締め作業 | 高 | S | done |
 
-## Source Audit
+## 情報源の確認結果
 
 | 情報源 | 結果 |
 | --- | --- |
-| Existing task files | No existing task tracking file was present before this file was added. |
-| README and docs | `README.md`, `docs/release-checklist.md`, and contribution guidance contain reusable validation guidance, but no current actionable implementation gap was found. |
-| Repository-local AGENTS and `.codex` | 該当なし. No repository-local `AGENTS.md` or `.codex` directory was found in the file list. Session instructions were applied separately. |
-| Code comments | 該当なし. Limited placeholder-comment search returned no matches. |
-| Local checks | `scan-private-markers.ps1`, `assert-oss-ready.ps1`, and `git diff --check` passed before creating this backlog. |
-| Git status and WIP branches | Working tree was clean. `origin/feature/oss-readiness` has no content diff against `main`, so no unmerged implementation task was identified. |
-| GitHub issues | 該当なし. `gh issue list --state open` returned an empty list. |
+| 既存タスク管理ファイル | このファイルを追加する前に、既存のタスク管理ファイルは見つからなかった。 |
+| README と docs | `README.md`、`docs/release-checklist.md`、contribution guidance には再利用できる検証手順があるが、現時点で新たに実装すべき未完了項目は見つからなかった。 |
+| repository-local `AGENTS.md` と `.codex` | 該当なし。ファイル一覧では repository-local `AGENTS.md` と `.codex` は見つからなかった。セッション指示は別途適用済み。 |
+| コードコメント | 該当なし。限定的な placeholder comment 検索で該当なし。 |
+| ローカル検証 | `scan-private-markers.ps1`、`assert-oss-ready.ps1`、`git diff --check` は 2026-06-11 の棚卸し時点で pass。締め作業の最終結果は `HANDOFF.md` に記録する。 |
+| Git 状態と WIP branch | 2026-06-13 時点で `chore/backlog-handoff` 上に締め作業中。`origin/feature/oss-readiness` は `main` と内容差分なし。 |
+| GitHub issues | 2026-06-11 の確認では open issue なし。2026-06-13 の締め作業では再確認未実施。 |
 
-## Notes
+## メモ
 
-- Current backlog has no remaining open or in-progress implementation tasks.
-- If new issues, failing checks, or concrete requirements appear, add them above with priority, size, and state before implementation.
+- 進行中状態のタスクは残っていない。
+- `skip` 状態のタスクは残っていない。
+- 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
