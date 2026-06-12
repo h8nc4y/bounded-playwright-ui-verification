@@ -16,7 +16,7 @@
 | repository-local `AGENTS.md` と `.codex` | 該当なし。ファイル一覧では repository-local `AGENTS.md` と `.codex` は見つからなかった。セッション指示は別途適用済み。 |
 | コードコメント | 該当なし。限定的な placeholder comment 検索で該当なし。 |
 | ローカル検証 | `scan-private-markers.ps1`、`assert-oss-ready.ps1`、`git diff --check` は 2026-06-11 の棚卸し時点で pass。締め作業の最終結果は `HANDOFF.md` に記録する。 |
-| Git 状態と WIP branch | 2026-06-13 時点で `chore/backlog-handoff` 上に締め作業中。`origin/feature/oss-readiness` は `main` と内容差分なし。 |
+| Git 状態と WIP branch | 2026-06-13 時点で `chore/backlog-handoff` は origin へ push 済み。`origin/feature/oss-readiness` は `main` と内容差分なし。 |
 | GitHub issues | 2026-06-11 の確認では open issue なし。2026-06-13 の締め作業では再確認未実施。 |
 
 ## メモ

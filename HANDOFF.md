@@ -7,6 +7,7 @@
 ## 現状サマリ
 
 - 現在の作業 branch は `chore/backlog-handoff`。
+- `chore/backlog-handoff` は `origin/chore/backlog-handoff` へ push 済み。
 - `main` は `origin/main` と同じ `a2c93a2` を指している。
 - `chore/backlog-handoff` には `TASKS_BACKLOG.md` 追加 commit `df9afe7` がある。
 - `TASKS_BACKLOG.md` には進行中タスクなし、`skip` なし。
@@ -22,6 +23,7 @@
 | 初期 skill と docs を追加 | `36bee96` | `SKILL.md`、README、examples、scripts の初期追加。 |
 | OSS readiness を整備 | `a2c93a2` | CI、issue template、support/security/contribution docs、validation scripts を整備。 |
 | 棚卸し結果を `TASKS_BACKLOG.md` に記録 | `df9afe7` | 残タスクの情報源を確認し、未処理タスクなしとして記録。 |
+| 引き継ぎ文書を追加し backlog を日本語で最新化 | `56ed73b` | `HANDOFF.md` 初版と `TASKS_BACKLOG.md` 更新。 |
 
 ## 未完了 / skip タスク
 
@@ -61,7 +63,7 @@ git diff --check
 | branch | 状態 | 内容 |
 | --- | --- | --- |
 | `main` | `origin/main` と一致 | 最新 release-ready 状態。 |
-| `chore/backlog-handoff` | local branch | backlog と handoff の文書化 branch。push 後に引き継ぎ対象。 |
+| `chore/backlog-handoff` | pushed branch | backlog と handoff の文書化 branch。`origin/chore/backlog-handoff` が引き継ぎ対象。 |
 | `origin/feature/oss-readiness` | remote branch | `main` と内容差分なし。履歴上は `a2c93a2` と別 commit `3fbef50` を指す。 |
 
 ## 次にやるべき候補
