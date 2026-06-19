@@ -126,6 +126,8 @@ if (Test-Path -LiteralPath (Get-RepoPath "README.md") -PathType Leaf) {
 
 $excludedDirectories = @(
   ".git",
+  ".claude",
+  ".codex",
   "node_modules",
   ".ui-verification",
   "playwright-report",

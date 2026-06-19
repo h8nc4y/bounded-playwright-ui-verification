@@ -15,6 +15,8 @@ $findings = New-Object System.Collections.Generic.List[object]
 
 $excludedDirectories = @(
   ".git",
+  ".claude",
+  ".codex",
   "node_modules",
   ".ui-verification",
   "playwright-report",

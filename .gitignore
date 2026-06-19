@@ -1,4 +1,6 @@
 .ui-verification/
+.claude/
+.codex/
 node_modules/
 playwright-report/
 test-results/
