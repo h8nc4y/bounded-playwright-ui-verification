@@ -15,7 +15,8 @@
 - Codex 自走のための運用契約 `AGENTS.md` を追加した。
 - 検証スクリプトの走査除外に `.claude` / `.codex`（agent ローカルのツール用ディレクトリ）を追加し、ローカル生成物起因で check:all が誤って赤になる罠を塞いだ。`.gitignore` にも両者を追加。
 - open GitHub issue / open PR は無し（PR #1 はマージ済み）。
-- 古い `feature/oss-readiness`（`main` と内容差分なし）は削除した。
+- 古い `feature/oss-readiness`（`main` と内容差分なし、PR #1 マージ済み）はリモートから削除済み。
+- `main` はブランチ保護が有効で、必須ステータスチェック「Validate repository」（CI）の通過を要求する。変更は PR を開いて CI を緑にしてからマージするのが基本（`AGENTS.md` §9 参照）。
 - スナップショットは陳腐化する。実際の状態は `git status` / `gh pr list` / `gh issue list` で都度確認すること。
 
 ## 完了タスクと commit
@@ -59,7 +60,7 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 
 | branch | 状態 | 内容 |
 | --- | --- | --- |
-| `main` | 最新・唯一 | release-ready 状態。タグ `v0.1.0` を含む。Codex はここから自走する。 |
+| `main` | 最新・唯一 | release-ready 状態。タグ `v0.1.0` を含む。ブランチ保護あり（必須チェック「Validate repository」）。Codex はここから自走する。 |
 
 ## 次にやるべき候補
 
