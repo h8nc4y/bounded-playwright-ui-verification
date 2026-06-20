@@ -20,6 +20,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.p
 git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
+On non-Windows shells, use PowerShell 7+ as `pwsh`; run each script with
+`pwsh -NoProfile -File ./scripts/<script-name>.ps1`.
+
 ## Review
 
 - [ ] Diff is focused on bounded UI verification.

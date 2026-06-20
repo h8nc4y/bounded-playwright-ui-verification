@@ -9,6 +9,7 @@
 | T-003 | Codex 自走運用契約 `AGENTS.md` を整備し、scan 除外を堅牢化する | 2026-06-20 の引き継ぎ整備 | 高 | M | done |
 | T-004 | 公開 docs の `git diff --check` 表記を CI と同形に揃える | `AGENTS.md` §5 / レビュー指摘 | 中 | S | done |
 | T-005 | `CHANGELOG.md` を `v0.1.0` タグとタグ後変更に整合させる | `AGENTS.md` §5 / changelog 確認 | 中 | S | done |
+| T-006 | 非 Windows 寄稿者向けの `pwsh` 検証手順を明確化する | `AGENTS.md` §5 / portable validation | 中 | S | done |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
