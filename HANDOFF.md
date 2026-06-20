@@ -9,13 +9,13 @@
 - **`AGENTS.md` が Codex 向けの恒久運用契約（主開発者として自走するためのルール）。** Codex CLI がリポジトリ直下の `AGENTS.md` を自動で読み込む。日々の作業ルール・4ゲート・レビュー方針・ブリーフ雛形はすべてそこにある。
 - 本 `HANDOFF.md` は現状スナップショットと検証記録。残タスク台帳は `TASKS_BACKLOG.md`。
 
-## 現状サマリ（2026-06-20 整備時点）
+## 現状サマリ（2026-06-21 自走更新時点）
 
-- `main` がリリース可能・最新で、唯一の作業対象ブランチ。タグ `v0.1.0` は `main` 上にある。
-- Codex 自走のための運用契約 `AGENTS.md` を追加した。
-- 検証スクリプトの走査除外に `.claude` / `.codex`（agent ローカルのツール用ディレクトリ）を追加し、ローカル生成物起因で check:all が誤って赤になる罠を塞いだ。`.gitignore` にも両者を追加。
-- open GitHub issue / open PR は無し（PR #1 はマージ済み）。
-- 古い `feature/oss-readiness`（`main` と内容差分なし、PR #1 マージ済み）はリモートから削除済み。
+- `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上にある。
+- Codex 自走のための運用契約 `AGENTS.md` があり、`TASKS_BACKLOG.md` と本 `HANDOFF.md` を併用する。
+- T-004 / T-005 / T-006 は完了済み。公開 docs の whitespace check は CI と同じ空ツリー比較へ統一され、`CHANGELOG.md` は `Unreleased` と `0.1.0 - 2026-06-06` に分離され、非 Windows shell 向けの `pwsh` 実行形式も明記された。
+- open GitHub issue / open PR は無し（2026-06-21 03:07 JST に `gh issue list` / `gh pr list` で確認）。
+- 古い `feature/oss-readiness`、`docs/align-whitespace-check`、`docs/update-changelog-v0-1-0`、`docs/portable-pwsh-validation` はマージ済みで、リモート追跡 ref も prune 済み。
 - `main` はブランチ保護が有効で、必須ステータスチェック「Validate repository」（CI）の通過を要求する。変更は PR を開いて CI を緑にしてからマージするのが基本（`AGENTS.md` §9 参照）。
 - スナップショットは陳腐化する。実際の状態は `git status` / `gh pr list` / `gh issue list` で都度確認すること。
 
@@ -27,24 +27,29 @@
 | OSS readiness を整備 | `a2c93a2` | CI、issue template、support/security/contribution docs、validation scripts を整備。 |
 | 棚卸し結果を `TASKS_BACKLOG.md` に記録 | `df9afe7` | 残タスクの情報源を確認し、未処理タスクなしとして記録。 |
 | 引き継ぎ文書を追加し backlog を日本語で最新化 | `56ed73b` / `6582fda` | `HANDOFF.md` 初版と `TASKS_BACKLOG.md` 更新。 |
-| Codex 自走運用契約 `AGENTS.md` を追加し、scan 除外を堅牢化 | この引き継ぎ整備 | `AGENTS.md` 追加、`.claude`/`.codex` を両 scan スクリプトの除外と `.gitignore` に追加。 |
+| Codex 自走運用契約 `AGENTS.md` を追加し、scan 除外を堅牢化 | `f6a5aba` / `3393305` | `AGENTS.md` 追加、`.claude`/`.codex` 除外、main ブランチ保護の扱いを明記。 |
+| T-004: whitespace check 表記を CI と同形に統一 | `3b63b5b` | PR #2。README / CONTRIBUTING / release checklist を空ツリー比較へ統一。 |
+| T-005: changelog を v0.1.0 と未リリース変更に分離 | `e5cd014` | PR #3。既存タグ `v0.1.0` とタグ後変更を区別。 |
+| T-006: 非 Windows shell 向け `pwsh` 手順を明確化 | `275d77d` | PR #4。README / CONTRIBUTING / release checklist に `pwsh` 実行形式を追記。 |
+| T-007: handoff を最新化 | この更新 | 古い T-004 残懸念を削除し、現在のブランチ・検証状態へ同期。 |
 
 ## 既知の問題・残懸念
 
-- 公開ドキュメント（`README.md` / `CONTRIBUTING.md` / `docs/release-checklist.md`）の whitespace チェックは素の `git diff --check` 表記のまま。CI は空ツリー比較（`git diff --check 4b825dc…04 HEAD`）でコミット済み内容を見るため、表記を揃えるのが望ましい（`AGENTS.md` §5 の候補、`TASKS_BACKLOG.md` 参照）。
 - このリポジトリは PowerShell scripts と Markdown が中心で、専用の typecheck や build コマンドは無い。
+- macOS / Linux 上での `pwsh` 実行は文書上の明確化のみで、実機検証は未確認。
+- `examples/` の追加拡充は安全な次候補だが、具体タスク化は未実施。
 
 ## 最終検証結果
 
-2026-06-20 の引き継ぎ整備で下記を実行した（`AGENTS.md` §6 と同形）。
+2026-06-21 の自走更新後に下記を実行した（`AGENTS.md` §6 と同形）。
 
 | 種別 | コマンド | 結果 |
 | --- | --- | --- |
 | private marker scan | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/scan-private-markers.ps1` | pass |
 | OSS readiness | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/assert-oss-ready.ps1` | pass |
 | whitespace lint | `git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD` | pass: exit 0、出力なし |
-| 除外の動作確認 | `.codex/` に絶対パスを置いて scan | pass: 除外され検出されないことを確認 |
 | typecheck / build | 該当コマンドなし | 未確認 |
+| UI / browser verification | フロント UI なし | 未確認 |
 
 ## セットアップ・検証コマンド
 
@@ -54,7 +59,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/assert-oss-ready.ps1
 git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
-この repository は package manager manifest を持たないため、dependency install は不要。
+この repository は package manager manifest を持たないため、dependency install は不要。非 Windows shell では PowerShell 7+ の `pwsh -NoProfile -File ./scripts/<script-name>.ps1` 形式を使う。
 
 ## ブランチ状況
 
@@ -64,5 +69,6 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 
 ## 次にやるべき候補
 
-- 生きた候補一覧は `AGENTS.md` §5 と `TASKS_BACKLOG.md` を参照。
+- 生きた候補一覧は `AGENTS.md` §5 と `TASKS_BACKLOG.md` を参照。2026-06-21 時点で T-001〜T-007 はすべて `done`。
+- 次に安全に具体化しやすい候補は、`examples/` の合成データ例拡充、または `pwsh` 手順の非 Windows 実機検証記録。ただし実機環境が無い場合は `未確認` と明記する。
 - 着手前に `TASKS_BACKLOG.md` へ優先度・規模・状態付きで追記し、`AGENTS.md` の自走ループ（§4）と4ゲート（§14）に従う。
