@@ -41,7 +41,7 @@ Run the repository checks before copying the skill:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check
+git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
 Manual install into a Codex-style skill directory:
@@ -94,7 +94,7 @@ Run all local checks before publishing, copying, or opening a pull request:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check
+git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
 `scan-private-markers.ps1` blocks common secret prefixes, private path markers,

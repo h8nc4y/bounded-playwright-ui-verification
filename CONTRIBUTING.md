@@ -27,7 +27,7 @@ Run these checks before opening a pull request:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check
+git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
 If your shell cannot execute PowerShell scripts directly, run the same scripts
