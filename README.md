@@ -44,6 +44,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.p
 git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
+On macOS, Linux, or a bash/zsh shell, install PowerShell 7+ and call the scripts
+with `pwsh -NoProfile -File ./scripts/<script-name>.ps1`; keep the Git command
+unchanged.
+
 Manual install into a Codex-style skill directory:
 
 ```powershell
@@ -96,6 +100,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-marke
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
 git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
+
+Use the same `pwsh -NoProfile -File ./scripts/<script-name>.ps1` form from
+non-Windows shells.
 
 `scan-private-markers.ps1` blocks common secret prefixes, private path markers,
 unexpected GitHub repository links, email-like values, and absolute Windows path

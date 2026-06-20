@@ -12,6 +12,7 @@ All notable changes to this project are recorded here.
 ### Changed
 
 - 公開 docs の whitespace check 表記を CI と同じ空ツリー比較に揃えました。
+- 非 Windows 寄稿者向けに `pwsh` での validation 実行手順を明確化しました。
 - `main` のブランチ保護と必須チェックの扱いを引き継ぎ文書に明記しました。
 - agent ローカルの `.claude` / `.codex` ディレクトリを validation scan と ignore 対象にしました。
 

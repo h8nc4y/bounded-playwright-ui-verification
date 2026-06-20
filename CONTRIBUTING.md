@@ -30,8 +30,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.p
 git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 ```
 
-If your shell cannot execute PowerShell scripts directly, run the same scripts
-with PowerShell 7+ or Windows PowerShell 5.1.
+If your shell cannot execute PowerShell scripts directly, use PowerShell 7+ as
+`pwsh -NoProfile -File ./scripts/<script-name>.ps1`. Windows contributors can
+also use Windows PowerShell 5.1 with the command form above.
 
 ## Documentation Style
 
