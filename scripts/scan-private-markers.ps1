@@ -4,41 +4,56 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "private-scan-config.ps1")
+
 $allowlistedRepoUrls = @(
   "https://github.com/h8nc4y/bounded-playwright-ui-verification",
   "https://github.com/h8nc4y/bounded-playwright-ui-verification.git"
 )
 
 $scanRoot = Resolve-Path -LiteralPath $Root
-$scriptPath = $PSCommandPath
 $findings = New-Object System.Collections.Generic.List[object]
 
-$excludedDirectories = @(
-  ".git",
-  ".claude",
-  ".codex",
-  "node_modules",
-  ".ui-verification",
-  "playwright-report",
-  "test-results",
-  "coverage",
-  "dist",
-  "build"
-)
+$excludedDirectories = Get-PrivateScanExcludedDirectories
 
+# Literal markers. Private-path / private-repo patterns are assembled from split
+# string fragments so the scanner source never contains the literal value
+# verbatim. That removes the need for a blanket self-exemption: real secrets are
+# detected anywhere (including in this file), while these rule definitions do not
+# trip their own rules. (Review drift item: align with 020 no-blanket-exempt.)
 $literalMarkers = @(
-  @{ Name = "OpenAI API key prefix"; Value = "sk-" }, # scanner-marker
-  @{ Name = "GitHub classic token prefix"; Value = "ghp_" }, # scanner-marker
-  @{ Name = "GitHub fine-grained token prefix"; Value = "github_pat_" }, # scanner-marker
-  @{ Name = "Slack bot token prefix"; Value = "xoxb-" }, # scanner-marker
-  @{ Name = "Bearer token prefix"; Value = "Bearer " }, # scanner-marker
-  @{ Name = "Private key block"; Value = "BEGIN PRIVATE KEY" }, # scanner-marker
-  @{ Name = "Private inventory repo"; Value = "h8nc4y/codex-global-context" }, # scanner-marker
-  @{ Name = "Private Windows project root"; Value = "D:\Agent\Codex\Projects" }, # scanner-marker
-  @{ Name = "Private Windows user root"; Value = "C:\Users\h8nc4" } # scanner-marker
+  @{ Name = "OpenAI API key prefix"; Value = ("s" + "k-") },
+  @{ Name = "GitHub classic token prefix"; Value = ("g" + "hp_") },
+  @{ Name = "GitHub fine-grained token prefix"; Value = ("github" + "_pat_") },
+  @{ Name = "Slack bot token prefix"; Value = ("xo" + "xb-") },
+  @{ Name = "Private key block"; Value = ("BEGIN " + "PRIVATE KEY") },
+  @{ Name = "Private inventory repo"; Value = ("h8nc4y" + "/codex-global-context") },
+  @{ Name = "Private Windows project root"; Value = ("D:" + "\Agent\Codex\Projects") },
+  @{ Name = "Private Windows user root"; Value = ("C:" + "\Users\h8nc4") }
 )
 
-$emailRegex = [regex]'[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}'
+# Regex markers. Prefixes that benefit from a length/charset shape, plus secret
+# formats added in the hardening pass (AWS / GCP / Slack variants / Stripe / PEM).
+$regexMarkers = @(
+  @{ Name = "AWS access key id"; Pattern = [regex]'AKIA[0-9A-Z]{16}' },
+  @{ Name = "Google API key"; Pattern = [regex]'AIza[0-9A-Za-z_\-]{35}' },
+  @{ Name = "Slack token (user/app/legacy)"; Pattern = [regex]'xox[apbr]-[0-9A-Za-z-]{8,}' },
+  @{ Name = "Slack app-level token"; Pattern = [regex]'xapp-[0-9A-Za-z-]{8,}' },
+  @{ Name = "Stripe live secret key"; Pattern = [regex]'(?:sk|rk)_live_[0-9A-Za-z]{16,}' },
+  @{ Name = "PEM private key block"; Pattern = [regex]'BEGIN (?:RSA|EC|DSA|OPENSSH|ENCRYPTED) PRIVATE KEY' },
+  # Bearer only matches when an actual token value follows, so prose such as
+  # "send a Bearer token" no longer trips it (review M-1).
+  @{ Name = "Bearer token"; Pattern = [regex]'Bearer [A-Za-z0-9._\-]{8,}' }
+)
+
+# Email: require a word/whitespace boundary on both sides and skip reserved
+# example domains and npm-style scope fragments to cut false positives (M-2).
+$emailRegex = [regex]'(?<![A-Z0-9._%+\-])[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}(?![A-Z0-9.\-])'
+$emailAllowlistDomains = @(
+  "EXAMPLE.COM",
+  "EXAMPLE.ORG",
+  "EXAMPLE.NET"
+)
 $windowsPathRegex = [regex]'(?<![A-Za-z0-9_])[A-Za-z]:\\[^\s"''<>|]+'
 $githubRepoUrlRegex = [regex]'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?'
 
@@ -77,13 +92,15 @@ function Add-Finding {
   }) | Out-Null
 }
 
-function Test-SelfMarkerLine {
-  param(
-    [string]$Path,
-    [string]$Line
-  )
+function Test-EmailAllowlisted {
+  param([string]$UpperEmail)
 
-  return ($Path -eq $scriptPath -and $Line.Contains("scanner-marker"))
+  foreach ($domain in $emailAllowlistDomains) {
+    if ($UpperEmail.EndsWith("@" + $domain) -or $UpperEmail.EndsWith("." + $domain)) {
+      return $true
+    }
+  }
+  return $false
 }
 
 $files = Get-ChildItem -LiteralPath $scanRoot -Recurse -File -Force | Where-Object {
@@ -94,39 +111,46 @@ $files = Get-ChildItem -LiteralPath $scanRoot -Recurse -File -Force | Where-Obje
 
 foreach ($file in $files) {
   $relativePath = Get-RelativePath -BasePath $scanRoot.Path -TargetPath $file.FullName
-  $lines = Get-Content -LiteralPath $file.FullName -Encoding UTF8
+  # Force an array so single-line files are not indexed character-by-character.
+  $lines = @(Get-Content -LiteralPath $file.FullName -Encoding UTF8)
 
   for ($i = 0; $i -lt $lines.Count; $i++) {
     $line = $lines[$i]
     $lineNumber = $i + 1
-    $isSelfMarkerLine = Test-SelfMarkerLine -Path $file.FullName -Line $line
 
     foreach ($marker in $literalMarkers) {
-      if (-not $isSelfMarkerLine -and $line.Contains($marker.Value)) {
-        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type $marker.Name -Detail "literal marker"
+      if ($line.Contains($marker.Value)) {
+        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type $marker.Name -Detail "<redacted>"
+      }
+    }
+
+    foreach ($marker in $regexMarkers) {
+      if ($marker.Pattern.IsMatch($line)) {
+        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type $marker.Name -Detail "<redacted>"
       }
     }
 
     foreach ($match in $githubRepoUrlRegex.Matches($line)) {
       if ($allowlistedRepoUrls -notcontains $match.Value) {
-        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type "Non-allowlisted GitHub repo URL" -Detail $match.Value
+        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type "Non-allowlisted GitHub repo URL" -Detail "<redacted>"
       }
     }
 
-    if (-not $isSelfMarkerLine) {
-      foreach ($match in $emailRegex.Matches($line.ToUpperInvariant())) {
-        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type "Email address" -Detail "email-like value"
+    $upperLine = $line.ToUpperInvariant()
+    foreach ($match in $emailRegex.Matches($upperLine)) {
+      if (-not (Test-EmailAllowlisted -UpperEmail $match.Value)) {
+        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type "Email address" -Detail "<redacted>"
       }
+    }
 
-      foreach ($match in $windowsPathRegex.Matches($line)) {
-        Add-Finding -Path $relativePath -LineNumber $lineNumber -Type "Windows absolute path" -Detail "absolute path-like value"
-      }
+    foreach ($match in $windowsPathRegex.Matches($line)) {
+      Add-Finding -Path $relativePath -LineNumber $lineNumber -Type "Windows absolute path" -Detail "<redacted>"
     }
   }
 }
 
 if ($findings.Count -gt 0) {
-  Write-Output "Private marker scan failed:"
+  Write-Output "Private marker scan failed (values redacted):"
   $findings | Sort-Object Path, Line, Type | Format-Table -AutoSize
   exit 1
 }

@@ -4,6 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "private-scan-config.ps1")
+
 $repoRoot = Resolve-Path -LiteralPath $Root
 $errors = New-Object System.Collections.Generic.List[string]
 $unverifiedMarker = ([string]([char]0x672A)) + ([string]([char]0x78BA)) + ([string]([char]0x8A8D))
@@ -124,18 +126,8 @@ if (Test-Path -LiteralPath (Get-RepoPath "README.md") -PathType Leaf) {
   }
 }
 
-$excludedDirectories = @(
-  ".git",
-  ".claude",
-  ".codex",
-  "node_modules",
-  ".ui-verification",
-  "playwright-report",
-  "test-results",
-  "coverage",
-  "dist",
-  "build"
-)
+# Single source of truth shared with scan-private-markers.ps1 (review S-1).
+$excludedDirectories = Get-PrivateScanExcludedDirectories
 
 $mojibakeMarkers = @(
   [char]0x8B5B,
@@ -158,7 +150,8 @@ $files = Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Force | Where-Obje
 
 foreach ($file in $files) {
   $relativePath = Get-RelativePath -BasePath $repoRoot.Path -TargetPath $file.FullName
-  $lines = Get-Content -LiteralPath $file.FullName -Encoding UTF8
+  # Force an array so single-line files are not indexed character-by-character.
+  $lines = @(Get-Content -LiteralPath $file.FullName -Encoding UTF8)
   for ($i = 0; $i -lt $lines.Count; $i++) {
     $line = $lines[$i]
     $lineNumber = $i + 1

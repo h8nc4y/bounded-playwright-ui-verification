@@ -104,9 +104,12 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 Use the same `pwsh -NoProfile -File ./scripts/<script-name>.ps1` form from
 non-Windows shells.
 
-`scan-private-markers.ps1` blocks common secret prefixes, private path markers,
+`scan-private-markers.ps1` blocks common secret prefixes (OpenAI, GitHub, Slack,
+AWS, Google, Stripe, and PEM private-key forms), private path markers,
 unexpected GitHub repository links, email-like values, and absolute Windows path
-leaks. `assert-oss-ready.ps1` checks the skill front matter, required public
+leaks. It is a best-effort guard and does not guarantee detection of every
+secret format, so keep secrets out of the repository regardless of a passing
+scan. `assert-oss-ready.ps1` checks the skill front matter, required public
 project files, required README sections, broken local Markdown links, mojibake,
 and placeholder markers.
 

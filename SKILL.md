@@ -24,6 +24,8 @@ complete.
   page.
 - Do not transmit secrets, tokens, private user data, customer data, auth
   cookies, or private logs to external services as part of UI verification.
+- The bundled private-marker scan is best-effort and does not guarantee every
+  secret format is caught; never rely on it as proof that no secret leaked.
 - If OAuth, login, or a protected route blocks inspection, report the blocked
   area as `未確認` instead of fabricating coverage.
 

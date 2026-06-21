@@ -20,13 +20,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Scan for private markers
-        shell: powershell
+        shell: pwsh
         run: .\scripts\scan-private-markers.ps1
 
+      - name: Run scanner regression tests
+        shell: pwsh
+        run: .\tests\scan-private-markers.Tests.ps1
+
       - name: Check OSS readiness
-        shell: powershell
+        shell: pwsh
         run: .\scripts\assert-oss-ready.ps1
 
       - name: Check whitespace in tracked files
-        shell: powershell
-        run: git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+        shell: pwsh
+        run: .\scripts\check-whitespace.ps1
