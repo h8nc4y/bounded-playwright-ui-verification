@@ -11,6 +11,7 @@
 | T-005 | `CHANGELOG.md` を `v0.1.0` タグとタグ後変更に整合させる | `AGENTS.md` §5 / changelog 確認 | 中 | S | done |
 | T-006 | 非 Windows 寄稿者向けの `pwsh` 検証手順を明確化する | `AGENTS.md` §5 / portable validation | 中 | S | done |
 | T-007 | `HANDOFF.md` を T-004〜T-006 完了後の状態へ同期する | 自走更新後の handoff 整備 | 中 | S | done |
+| T-008 | 合成 evidence matrix example を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
@@ -31,3 +32,8 @@
 - 進行中状態のタスクは残っていない。
 - `skip` 状態のタスクは残っていない。
 - 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
+
+- 📌 2026-06-21 Claude Code 再レビュー: High 指摘の advisory はローカル検証領域へ退避済み（着手前にコスト・secret・要件ゲート④の境界を確認）。横断索引: `CLAUDE_CODE_REVIEW_INDEX_2026-06-21.md`。
+
+
+- 🔧 2026-06-21 Claude Code 実装: `fix/claude-scanner-hardening` ブランチに修正をコミット済み（base docs/add-evidence-matrix-example@c444e16、Codex作業ツリーは未変更）。検証/統合手順は Projectsルート `CLAUDE_FIX_BRANCHES_2026-06-21.md` 参照。

@@ -87,6 +87,7 @@ relevant. Use it to plan and report:
 - [UI verification checklist](examples/ui-verification-checklist.md)
 - [Final report template](examples/final-report-template.md)
 - [Bounded server runbook](examples/server-runbook.md)
+- [Evidence matrix example](examples/evidence-matrix.md)
 
 All examples are synthetic. They do not include private logs, screenshots,
 tokens, auth cookies, or customer data.
