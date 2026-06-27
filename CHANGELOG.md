@@ -8,6 +8,7 @@ All notable changes to this project are recorded here.
 
 - Codex 自走運用契約を `AGENTS.md` に追加しました。
 - 引き継ぎ情報と残タスク台帳を `HANDOFF.md` と `TASKS_BACKLOG.md` に整理しました。
+- 合成データだけを使う evidence matrix example を `examples/` に追加しました。
 
 ### Changed
 

@@ -30,6 +30,16 @@ When reporting a possible leak, include:
 
 Do not paste the sensitive value itself into a public issue.
 
+## Scan Coverage
+
+`scripts/scan-private-markers.ps1` is a best-effort guard. It blocks common
+secret prefixes (including AWS, Google, Slack, Stripe, and PEM private-key
+forms), private path markers, unexpected GitHub repository links, and
+email-like values, but it does not guarantee detection of every secret format
+or every high-entropy value. Do not treat a passing scan as proof that no
+secret is present; keep secrets, tokens, and private data out of the repository
+in the first place.
+
 ## Handling Sensitive Findings
 
 If a real secret or credential may have been exposed, rotate it outside this
