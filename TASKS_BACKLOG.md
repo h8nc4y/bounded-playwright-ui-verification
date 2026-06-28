@@ -13,6 +13,7 @@
 | T-007 | `HANDOFF.md` を T-004〜T-006 完了後の状態へ同期する | 自走更新後の handoff 整備 | 中 | S | done |
 | T-008 | 合成 evidence matrix example を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-009 | browser verification の失敗時報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
+| T-010 | login/OAuth で保護routeが blocked になった時の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
@@ -31,6 +32,7 @@
 ## メモ
 
 - 進行中状態のタスクは残っていない。
+- 📌 2026-06-28 Codex 実装: `examples/protected-route-report.md` を追加し、ログイン/OAuth 境界で protected UI を過大報告せず `未確認` として残す合成例を README / CHANGELOG と同期した。
 - `skip` 状態のタスクは残っていない。
 - 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
 

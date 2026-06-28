@@ -4,6 +4,8 @@ All notable changes to this project are recorded here.
 
 ## Unreleased
 
+- Added a synthetic protected-route verification report example for login/OAuth blocked states.
+
 ### Added
 
 - Codex 自走運用契約を `AGENTS.md` に追加しました。
