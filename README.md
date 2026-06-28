@@ -88,6 +88,7 @@ relevant. Use it to plan and report:
 - [Final report template](examples/final-report-template.md)
 - [Bounded server runbook](examples/server-runbook.md)
 - [Evidence matrix example](examples/evidence-matrix.md)
+- [Failed verification report example](examples/failed-verification-report.md)
 
 All examples are synthetic. They do not include private logs, screenshots,
 tokens, auth cookies, or customer data.

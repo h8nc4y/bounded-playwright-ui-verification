@@ -13,7 +13,7 @@
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上にある。
 - Codex 自走のための運用契約 `AGENTS.md` があり、`TASKS_BACKLOG.md` と本 `HANDOFF.md` を併用する。
-- T-004 / T-005 / T-006 / T-008 は完了済み。公開 docs の whitespace check は CI と同じ空ツリー比較へ統一され、`CHANGELOG.md` は `Unreleased` と `0.1.0 - 2026-06-06` に分離され、非 Windows shell 向けの `pwsh` 実行形式も明記された。`examples/evidence-matrix.md` には合成データだけで browser evidence の記録例を追加した。
+- T-004 / T-005 / T-006 / T-008 / T-009 は完了済み。公開 docs の whitespace check は CI と同じ空ツリー比較へ統一され、`CHANGELOG.md` は `Unreleased` と `0.1.0 - 2026-06-06` に分離され、非 Windows shell 向けの `pwsh` 実行形式も明記された。`examples/evidence-matrix.md` には合成データだけで browser evidence の記録例を追加し、`examples/failed-verification-report.md` には失敗・部分未確認の報告例を追加した。
 - open GitHub issue / open PR は無し（2026-06-21 03:07 JST に `gh issue list` / `gh pr list` で確認）。
 - 古い `feature/oss-readiness`、`docs/align-whitespace-check`、`docs/update-changelog-v0-1-0`、`docs/portable-pwsh-validation` はマージ済みで、リモート追跡 ref も prune 済み。
 - `main` はブランチ保護が有効で、必須ステータスチェック「Validate repository」（CI）の通過を要求する。変更は PR を開いて CI を緑にしてからマージするのが基本（`AGENTS.md` §9 参照）。
@@ -32,7 +32,8 @@
 | T-005: changelog を v0.1.0 と未リリース変更に分離 | `e5cd014` | PR #3。既存タグ `v0.1.0` とタグ後変更を区別。 |
 | T-006: 非 Windows shell 向け `pwsh` 手順を明確化 | `275d77d` | PR #4。README / CONTRIBUTING / release checklist に `pwsh` 実行形式を追記。 |
 | T-007: handoff を最新化 | `c444e16` | 古い T-004 残懸念を削除し、現在のブランチ・検証状態へ同期。 |
-| T-008: evidence matrix example を追加 | この更新 | 合成データだけで、完了・未確認・blocked を分ける browser evidence 記録例を追加。 |
+| T-008: evidence matrix example を追加 | `ad4decd` | 合成データだけで、完了・未確認・blocked を分ける browser evidence 記録例を追加。 |
+| T-009: 失敗時 report example を追加 | この更新 | 合成データだけで、browser verification の失敗・部分未確認を過大報告せず書く例を追加。 |
 
 ## 既知の問題・残懸念
 
@@ -70,6 +71,6 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 
 ## 次にやるべき候補
 
-- 生きた候補一覧は `AGENTS.md` §5 と `TASKS_BACKLOG.md` を参照。2026-06-21 時点で T-001〜T-008 はすべて `done`。
-- 次に安全に具体化しやすい候補は、browser verification の失敗時報告例の追加、または `pwsh` 手順の非 Windows 実機検証記録。ただし実機環境が無い場合は `未確認` と明記する。
+- 生きた候補一覧は `AGENTS.md` §5 と `TASKS_BACKLOG.md` を参照。2026-06-28 時点で T-001〜T-009 はすべて `done`。
+- 次に安全に具体化しやすい候補は、`pwsh` 手順の非 Windows 実機検証記録、または既存 examples の追加的な synthetic scenario 拡充。ただし実機環境が無い場合は `未確認` と明記する。
 - 着手前に `TASKS_BACKLOG.md` へ優先度・規模・状態付きで追記し、`AGENTS.md` の自走ループ（§4）と4ゲート（§14）に従う。
