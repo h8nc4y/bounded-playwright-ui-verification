@@ -90,6 +90,7 @@ relevant. Use it to plan and report:
 - [Evidence matrix example](examples/evidence-matrix.md)
 - [Failed verification report example](examples/failed-verification-report.md)
 - [Protected route blocked verification report](examples/protected-route-report.md)
+- [Responsive overflow verification report](examples/responsive-overflow-report.md)
 
 All examples are synthetic. They do not include private logs, screenshots,
 tokens, auth cookies, or customer data.
