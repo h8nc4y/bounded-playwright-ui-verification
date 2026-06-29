@@ -5,6 +5,7 @@ All notable changes to this project are recorded here.
 ## Unreleased
 
 - Added a synthetic protected-route verification report example for login/OAuth blocked states.
+- Added a synthetic responsive-overflow verification report example for viewport fit failures.
 
 ### Added
 
