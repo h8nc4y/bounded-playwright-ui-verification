@@ -9,12 +9,12 @@
 - **`AGENTS.md` が Codex 向けの恒久運用契約（主開発者として自走するためのルール）。** Codex CLI がリポジトリ直下の `AGENTS.md` を自動で読み込む。日々の作業ルール・4ゲート・レビュー方針・ブリーフ雛形はすべてそこにある。
 - 本 `HANDOFF.md` は現状スナップショットと検証記録。残タスク台帳は `TASKS_BACKLOG.md`。
 
-## 現状サマリ（2026-06-21 自走更新時点）
+## 現状サマリ（2026-06-29 15:41 JST 自走更新時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上にある。
 - Codex 自走のための運用契約 `AGENTS.md` があり、`TASKS_BACKLOG.md` と本 `HANDOFF.md` を併用する。
-- T-004 / T-005 / T-006 / T-008 / T-009 / T-010 は完了済み。公開 docs の whitespace check は CI と同じ空ツリー比較へ統一され、`CHANGELOG.md` は `Unreleased` と `0.1.0 - 2026-06-06` に分離され、非 Windows shell 向けの `pwsh` 実行形式も明記された。`examples/evidence-matrix.md` には合成データだけで browser evidence の記録例を追加し、`examples/failed-verification-report.md` には失敗・部分未確認の報告例を追加した。
-- open GitHub issue / open PR は無し（2026-06-21 03:07 JST に `gh issue list` / `gh pr list` で確認）。
+- T-004 / T-005 / T-006 / T-008 / T-009 / T-010 は完了済み。公開 docs の whitespace check は CI と同じ空ツリー比較へ統一され、`CHANGELOG.md` は `Unreleased` と `0.1.0 - 2026-06-06` に分離され、非 Windows shell 向けの `pwsh` 実行形式も明記された。`examples/evidence-matrix.md` / `examples/failed-verification-report.md` / `examples/protected-route-report.md` には、合成データだけで完了・失敗・blocked・protected route 未確認を分ける browser evidence 記録例を追加済み。
+- open GitHub issue / open PR は無し（2026-06-29 15:41 JST に `gh issue list` / `gh pr list` で確認）。
 - 古い `feature/oss-readiness`、`docs/align-whitespace-check`、`docs/update-changelog-v0-1-0`、`docs/portable-pwsh-validation` はマージ済みで、リモート追跡 ref も prune 済み。
 - `main` はブランチ保護が有効で、必須ステータスチェック「Validate repository」（CI）の通過を要求する。変更は PR を開いて CI を緑にしてからマージするのが基本（`AGENTS.md` §9 参照）。
 - スナップショットは陳腐化する。実際の状態は `git status` / `gh pr list` / `gh issue list` で都度確認すること。
@@ -33,8 +33,8 @@
 | T-006: 非 Windows shell 向け `pwsh` 手順を明確化 | `275d77d` | PR #4。README / CONTRIBUTING / release checklist に `pwsh` 実行形式を追記。 |
 | T-007: handoff を最新化 | `c444e16` | 古い T-004 残懸念を削除し、現在のブランチ・検証状態へ同期。 |
 | T-008: evidence matrix example を追加 | `ad4decd` | 合成データだけで、完了・未確認・blocked を分ける browser evidence 記録例を追加。 |
-| T-009: 失敗時 report example を追加 | この更新 | 合成データだけで、browser verification の失敗・部分未確認を過大報告せず書く例を追加。 |
-| T-010: protected route report example を追加 | 未コミット | ログイン/OAuth 境界で protected UI を未確認として残す合成例を追加。 |
+| T-009: 失敗時 report example を追加 | `fb16227` | PR #7。合成データだけで、browser verification の失敗・部分未確認を過大報告せず書く例を追加。 |
+| T-010: protected route report example を追加 | `5ff7adc` | PR #8。ログイン/OAuth 境界で protected UI を未確認として残す合成例を追加。 |
 
 ## 既知の問題・残懸念
 
