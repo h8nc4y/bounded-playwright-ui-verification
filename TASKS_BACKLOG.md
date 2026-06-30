@@ -15,6 +15,7 @@
 | T-009 | browser verification の失敗時報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-010 | login/OAuth で保護routeが blocked になった時の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-011 | responsive overflow の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
+| T-012 | blank render target の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
@@ -35,6 +36,7 @@
 - 進行中状態のタスクは残っていない。
 - 📌 2026-06-28 Codex 実装: `examples/protected-route-report.md` を追加し、ログイン/OAuth 境界で protected UI を過大報告せず `未確認` として残す合成例を README / CHANGELOG と同期した。
 - 📌 2026-06-30 Codex 実装: `examples/responsive-overflow-report.md` を追加し、390px の横スクロールと focus clipping を console/network 結果と混ぜずに報告する合成例を README / CHANGELOG と同期した。
+- 📌 2026-06-30 Codex 実装: `examples/blank-render-target-report.md` を追加し、DOM load / console / network が緑でも主要canvas/chartがblankなら描画成功と報告しない合成例を README / CHANGELOG と同期した。
 - `skip` 状態のタスクは残っていない。
 - 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
 
