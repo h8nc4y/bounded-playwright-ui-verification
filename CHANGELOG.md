@@ -4,6 +4,7 @@ All notable changes to this project are recorded here.
 
 ## Unreleased
 
+- Added a synthetic blank-render-target verification report example for canvas/chart surfaces that load but do not visibly draw.
 - Added a synthetic protected-route verification report example for login/OAuth blocked states.
 - Added a synthetic responsive-overflow verification report example for viewport fit failures.
 
