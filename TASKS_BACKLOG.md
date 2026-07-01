@@ -16,6 +16,7 @@
 | T-010 | login/OAuth で保護routeが blocked になった時の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-011 | responsive overflow の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-012 | blank render target の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
+| T-013 | PR #11 後の current-state を `HANDOFF.md` / `TASKS_BACKLOG.md` に同期する | PR #11 merge 後の文書drift | 中 | S | done |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
@@ -25,11 +26,11 @@
 | --- | --- |
 | 既存タスク管理ファイル | このファイルを追加する前に、既存のタスク管理ファイルは見つからなかった。 |
 | README と docs | `README.md`、`docs/release-checklist.md`、contribution guidance には再利用できる検証手順があるが、現時点で新たに実装すべき未完了項目は見つからなかった。 |
-| repository-local `AGENTS.md` と `.codex` | 該当なし。ファイル一覧では repository-local `AGENTS.md` と `.codex` は見つからなかった。セッション指示は別途適用済み。 |
+| repository-local `AGENTS.md` と `.codex` | `AGENTS.md` は存在し、このリポジトリの自走運用契約として適用中。repo-local `.codex` は該当なし。 |
 | コードコメント | 該当なし。限定的な placeholder comment 検索で該当なし。 |
-| ローカル検証 | `scan-private-markers.ps1`、`assert-oss-ready.ps1`、`git diff --check` は 2026-06-11 の棚卸し時点で pass。締め作業の最終結果は `HANDOFF.md` に記録する。 |
-| Git 状態と WIP branch | 2026-06-13 時点で `chore/backlog-handoff` は origin へ push 済み。`origin/feature/oss-readiness` は `main` と内容差分なし。 |
-| GitHub issues | 2026-06-11 の確認では open issue なし。2026-06-13 の締め作業では再確認未実施。 |
+| ローカル検証 | 2026-07-01 current-state sync branchで `scan-private-markers.ps1`、`assert-oss-ready.ps1`、CI同形の空ツリー比較 `git diff --check` がpass。最終結果は `HANDOFF.md` に記録。 |
+| Git 状態と WIP branch | 2026-07-01 12:33 JST時点で `main...origin/main` clean。古い通常作業branchは整理済みで、PR #11 merge `822d000` まで反映済み。 |
+| GitHub issues / PRs | 2026-07-01 12:33 JST時点で open issue / open PR は0件。 |
 
 ## メモ
 
@@ -37,6 +38,7 @@
 - 📌 2026-06-28 Codex 実装: `examples/protected-route-report.md` を追加し、ログイン/OAuth 境界で protected UI を過大報告せず `未確認` として残す合成例を README / CHANGELOG と同期した。
 - 📌 2026-06-30 Codex 実装: `examples/responsive-overflow-report.md` を追加し、390px の横スクロールと focus clipping を console/network 結果と混ぜずに報告する合成例を README / CHANGELOG と同期した。
 - 📌 2026-06-30 Codex 実装: `examples/blank-render-target-report.md` を追加し、DOM load / console / network が緑でも主要canvas/chartがblankなら描画成功と報告しない合成例を README / CHANGELOG と同期した。
+- 📌 2026-07-01 Codex 同期: PR #11 merge `822d000` 後の current-state を HANDOFF / TASKS_BACKLOG に反映し、repo-local `AGENTS.md` の存在と open issue / open PR 0件を再確認した。
 - `skip` 状態のタスクは残っていない。
 - 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
 
