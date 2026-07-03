@@ -18,6 +18,7 @@
 | T-012 | blank render target の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-013 | PR #11 後の current-state を `HANDOFF.md` / `TASKS_BACKLOG.md` に同期する | PR #11 merge 後の文書drift | 中 | S | done |
 | T-014 | hover/focus state の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
+| T-015 | 価値・差別化・証跡粒度の再要件定義ドラフトを `docs/` に追加する | 2026-07-03 Fable5 引き継ぎ / prompt addendum | 高 | M | done |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
@@ -40,6 +41,7 @@
 - 📌 2026-06-30 Codex 実装: `examples/responsive-overflow-report.md` を追加し、390px の横スクロールと focus clipping を console/network 結果と混ぜずに報告する合成例を README / CHANGELOG と同期した。
 - 📌 2026-06-30 Codex 実装: `examples/blank-render-target-report.md` を追加し、DOM load / console / network が緑でも主要canvas/chartがblankなら描画成功と報告しない合成例を README / CHANGELOG と同期した。
 - 📌 2026-07-01 Codex 同期: PR #11 merge `822d000` 後の current-state を HANDOFF / TASKS_BACKLOG に反映し、repo-local `AGENTS.md` の存在と open issue / open PR 0件を再確認した。
+- 📌 2026-07-03 Fable5 実装: T-014 を PR #13 で `main` へマージ。`docs/requirements-redefinition-2026-07.md` を追加し、価値の再定式化（pre-claim evidence contract）、差別化レイヤーモデル、sparse claim ledger 型の証跡粒度、人間への質問リスト（D1〜D4 / O1〜O3）を提案。§14④ 該当項目は質問リストに隔離し、承認まで既存正本を変更しない。
 - 📌 2026-07-02 Codex 実装: `examples/hover-focus-state-report.md` を追加し、hover / focus / active / disabled state を混同せず、keyboard reachability failure を独立して報告する合成例を README / CHANGELOG と同期した。
 - `skip` 状態のタスクは残っていない。
 - 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
