@@ -1,6 +1,6 @@
 # ClaudeCode Fable5 handoff - 019_bounded-playwright-ui-verification
 
-作成日時: 2026/07/02 08:30:54 JST  
+作成日時: 2026/07/02 08:30:54 JST。
 配置: repo-local draft。公開・commit・PR化する前に、private context とローカル絶対パスが残っていないか確認すること。
 
 ## 調査範囲と注意

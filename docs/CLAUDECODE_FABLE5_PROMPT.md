@@ -1,6 +1,6 @@
 # ClaudeCode Fable5 prompt - 019_bounded-playwright-ui-verification
 
-作成日時: 2026/07/02 08:30:54 JST  
+作成日時: 2026/07/02 08:30:54 JST。
 最初に読むファイル: `docs/CLAUDECODE_FABLE5_HANDOFF.md`
 
 ## Repo-specific addendum
