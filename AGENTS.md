@@ -12,9 +12,9 @@ Codex CLI はリポジトリ直下の `AGENTS.md` を自動で読み込む。セ
 - **あなた（Codex）= 自律的な主開発者。** タスク選定 → 実装 → 自己検証 → 日本語コミット
   → PR → **セルフレビューによる承認** → マージ → ブランチ削除 までを、人間の承認待ちなしで
   自走する（例外は §14 の4ゲートのみ）。
-- **フロントのビジュアルデザインの「創出」だけは行わない。** 配色・書体・レイアウトを
-  新規に決める必要が出たら、実装せず §12 のブリーフを書いて停止する。人手で ClaudeDesign
-  （Claude の frontend-design）へ渡し、返ってきた仕様に沿って実装する。
+- **フロントのビジュアルデザインを新規に創出する場合**（本リポジトリに UI は無いので通常は
+  発生しない）は、§12 のブリーフ雛形で要件を明文化してから実装する。外部デザイナー／
+  デザイン特化エージェントへの委譲はセッションの指示があるときのみ（固定の担当割りは無い）。
 - **レビューは原則あなた自身のセルフレビュー（§11）。** 確信が持てない箇所だけ §13 の
   雛形で外部（ChatGPT / Claude）へ依頼する。
 
@@ -28,8 +28,9 @@ Codex CLI はリポジトリ直下の `AGENTS.md` を自動で読み込む。セ
   配布する。
 - 主成果物: `SKILL.md`（スキル本体）、`README.md`、`examples/`（合成データのみ）、
   `scripts/`（検証スクリプト）、その他 OSS docs。
-- package manager manifest は無い。build / typecheck / テストランナーも無い。依存
-  インストールは不要。
+- package manager manifest は無い。build / typecheck は無く、依存インストールも不要。
+  回帰テストは `tests/scan-private-markers.Tests.ps1`（依存ゼロの自前スクリプト。scanner
+  自身の検出・redact・偽陽性ガードを検証し、CI でも実行される）。
 - プラットフォームは Windows（PowerShell 5.1 / 7+）。CI は GitHub Actions（windows-latest）。
 - スキルが扱う題材（ブラウザ UI 検証）は、このリポジトリ自身には適用されない
   （リポジトリにフロント UI は無い）。
@@ -39,8 +40,7 @@ Codex CLI はリポジトリ直下の `AGENTS.md` を自動で読み込む。セ
 ## §3 現状スナップショット（恒久情報は生きた情報源を見る）
 
 - 引き継ぎ詳細 = `HANDOFF.md` / 残タスク台帳 = `TASKS_BACKLOG.md` / 履歴 = `git log`。
-- 2026-06-20 の引き継ぎ整備時点: `main` がリリース可能・最新。タグ `v0.1.0` あり。
-  open issue / open PR なし。作業用ブランチは整理済みで `main` 一本。
+  本書には日付入りのスナップショットを書かない（陳腐化するため。現況は `HANDOFF.md` 側）。
 - スナップショットは陳腐化する。**実際の状態は毎回 `git status` / `gh pr list` /
   `gh issue list` で確認する。**
 - `gh` を使う前に `gh auth status` の成功を確認する。**空の `gh issue list` は「issue ゼロを
@@ -81,17 +81,13 @@ Codex CLI はリポジトリ直下の `AGENTS.md` を自動で読み込む。セ
 着手前に `TASKS_BACKLOG.md` の表へ「優先度・規模・状態」付きで追記し、完了したら
 `done` に更新する。
 
-初期候補（いずれも安全・自走可能）:
+常に安全・自走可能な定番候補（具体的な現役タスクは `TASKS_BACKLOG.md` を正本とする）:
 
-- `CHANGELOG.md`（既に存在し、`assert-oss-ready.ps1` の必須ファイル）の内容を `v0.1.0`
-  タグの実体と整合させる。これは**文書のみ**の更新であり新規作成ではない。既存の
-  `Unreleased` 見出しを過去バージョン見出しへ昇格させる編集は、対応する git tag / Release を
-  作らない限り自走可。新バージョン番号の確定が新規リリース意図を含む場合は §14① で確認する。
-- 公開ドキュメント（`README.md` / `CONTRIBUTING.md` / `docs/release-checklist.md`）の
-  whitespace チェック表記を、CI と同形の `git diff --check`（§6）に揃える。
-- 非 Windows 寄稿者向けに検証手順の可搬性を上げる（`pwsh` / bash でも回せる注記など）。
-  `CONTRIBUTING.md` が歓迎する範囲。
 - `examples/` の拡充（合成データのみ）。
+- 公開ドキュメントの誤記修正・文言明確化・リンク切れ修正（§10 の意味を変えない範囲）。
+- 非 Windows 寄稿者向けの検証手順の可搬性改善（`CONTRIBUTING.md` が歓迎する範囲）。
+- `CHANGELOG.md` の `Unreleased` 整理は文書のみなら自走可。ただし `Unreleased` を
+  バージョン見出しへ昇格させて新リリースを確定する編集は §14①（tag / Release）で確認する。
 
 明確にやらないこと（スコープ外。提案する場合は §14④）: パッケージ公開、ブラウザ
 バイナリ同梱、Playwright ブランド素材、第三者スクリーンショット、有料サービス依存。
@@ -100,21 +96,25 @@ Codex CLI はリポジトリ直下の `AGENTS.md` を自動で読み込む。セ
 
 ## §6 検証ゲート: check:all（緑必須）
 
-このリポジトリの「check:all 緑」= 次の3つが**すべて exit 0**であること。**CI
-（`.github/workflows/ci.yml`）と同形になるよう、3番目はコミット後に空ツリー比較で回す**:
+このリポジトリの「check:all 緑」= 次の4つが**すべて exit 0**であること。**CI
+（`.github/workflows/ci.yml`）の4ステップと同形**:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/scan-private-markers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/scan-private-markers.Tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/assert-oss-ready.ps1
-git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
 ```
 
 - PowerShell 7 環境や別シェルからは `powershell` を `pwsh` に置き換える。スクリプトは
   `$PSScriptRoot` から Root を解決するので cwd 非依存。パス区切りは `/` でよい。
-- **3番目について**: 素の `git diff --check` は未コミットの作業ツリー差分しか見ない。CI は
-  `git diff --check <empty-tree> HEAD`（`4b825dc…04` は git の空ツリーハッシュ）で
-  **コミット済み内容全体**の whitespace を検査する。コミット後は作業ツリーが clean なので
-  素の形は素通りしてしまう。**自己検証では必ず CI と同形（空ツリー比較）を使う**こと。
+- **whitespace check について**: `check-whitespace.ps1` は空ツリー比較の
+  `git diff --check <empty-tree> HEAD` を1箇所に集約した単一エントリ点で、
+  **コミット済み内容全体**の whitespace を検査する。素の `git diff --check` は未コミットの
+  作業ツリー差分しか見ず、コミット後の clean tree では素通りするため使わない。
+  **自己検証は必ずコミット後に CI と同形（このスクリプト）で回す**こと。
+- `tests/scan-private-markers.Tests.ps1` は scanner の検出・redact・偽陽性ガードの回帰
+  テスト（依存ゼロ、Windows PowerShell 5.1 / pwsh 両対応）。scanner を変更したら必ず回す。
 - `scan-private-markers.ps1` は秘匿値プレフィックス・私的パス・許可外の GitHub URL・
   メール様文字列・Windows 絶対パスを遮断する。**allowlist 済みの GitHub URL はこのリポジトリ
   自身の URL のみ**。第三者の `github.com/<owner>/<repo>` リンクを書くと落ちる（必要なら
@@ -124,9 +124,10 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
   `scripts/assert-oss-ready.ps1` の `$placeholderWords`（`"TO"+"DO"` のように分割定義）を
   参照。** この AGENTS.md 自身もそれらの語をそのまま書かないよう避けている。文章では
   代わりに「候補 / 未着手 / 次の一手」を使う。
-- 両スクリプトは**作業ツリー全体**を `Get-ChildItem -Force` で走査する。除外は固定リスト:
-  `.git` `.claude` `.codex` `node_modules` `.ui-verification` `playwright-report`
-  `test-results` `coverage` `dist` `build`。
+- scan と OSS readiness の両スクリプトは**作業ツリー全体**を `Get-ChildItem -Force` で
+  走査する。除外ディレクトリ集合の単一情報源は `scripts/private-scan-config.ps1`
+  （`.git` `.claude` `.codex` `node_modules` `.ui-verification` `playwright-report`
+  `test-results` `coverage` `dist` `build`）。
 - **赤スタート時の扱い**: 開始前 check:all が赤なら、その上に積まない。原因を切り分ける —
   (a) `.claude/` 等の**ローカル専用・untracked ファイル**起因のノイズ（`git ls-files` で
   未追跡を確認。除外リストにあるので通常は起きないが、想定外の untracked パスが秘匿値や絶対
@@ -227,25 +228,25 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 
 ---
 
-## §12 ClaudeDesign ブリーフ雛形（フロントのビジュアルデザイン委譲）
+## §12 デザインブリーフ雛形（フロントのビジュアルデザイン創出時）
 
-フロントの配色・書体・レイアウトを新規に決める必要が出たら、**実装せず**ブリーフを書いて
-停止する（人手で Claude frontend-design へ渡す）。
+フロントの配色・書体・レイアウトを新規に決める必要が出たら（本リポジトリに UI は無いので
+通常は発生しない）、実装に入る前にブリーフで要件を明文化する。
 
-手順（二重停止を避けるための順序）:
+手順:
 
 1. その視覚成果物の追加がこのリポジトリの対象範囲 / Non-Goals を広げるなら、**まず §14④ で
    拡大の承認を取る**。承認前はブリーフも出さず §14④ の確認だけ行う。
-2. 承認後（または scope 内なら直ちに）、ブリーフを `design/brief-<topic>.md` に書き、
-   `design/<topic>` ブランチで commit して push し、**停止**する。応答にもブリーフ本文を出す。
-3. **再開条件**: 人間が返ってきた仕様を `design/<topic>-spec.md`（または当該 PR への
-   コメント）として戻したら、それを検出して仕様に沿って実装する。検出できなければ同じ
-   ブリーフを再発行してループしないこと。
+2. 承認後（または scope 内なら直ちに）、ブリーフを `design/brief-<topic>.md` に書いてから
+   実装する。外部のデザイン特化エージェント／人手レビューへ渡すのは、セッションで明示的に
+   指示されたときのみ（固定の担当割りは無い）。その場合はブリーフを出して停止し、仕様が
+   `design/<topic>-spec.md`（または当該 PR コメント）で戻ったら仕様に沿って実装する。
+   検出できなければ同じブリーフを再発行してループしないこと。
 
 ブリーフ雛形:
 
 ```markdown
-## ClaudeDesign ブリーフ
+## デザインブリーフ
 - 対象 / 画面: <何の UI か・URL / ルート>
 - 目的・成功条件: <ユーザーに何をさせたいか>
 - 文脈・制約: <ブランド / 既存トーン / 技術制約 / 対応ブラウザ>

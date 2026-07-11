@@ -61,17 +61,8 @@ git clone https://github.com/h8nc4y/bounded-playwright-ui-verification.git
 cd bounded-playwright-ui-verification
 ```
 
-Run the repository checks before copying the skill:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
-```
-
-On macOS, Linux, or a bash/zsh shell, install PowerShell 7+ and call the scripts
-with `pwsh -NoProfile -File ./scripts/<script-name>.ps1`; keep the Git command
-unchanged.
+Run the repository checks (see [Validation And Scan](#validation-and-scan))
+before copying the skill.
 
 Manual install into a Codex-style skill directory:
 
@@ -124,16 +115,21 @@ tokens, auth cookies, or customer data.
 
 ## Validation And Scan
 
-Run all local checks before publishing, copying, or opening a pull request:
+Run all local checks before publishing, copying, or opening a pull request.
+These are the same four steps CI runs:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\scan-private-markers.Tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-whitespace.ps1
 ```
 
-Use the same `pwsh -NoProfile -File ./scripts/<script-name>.ps1` form from
-non-Windows shells.
+On macOS, Linux, or any shell with PowerShell 7+, use
+`pwsh -NoProfile -File ./scripts/<script-name>.ps1` instead. Run
+`check-whitespace.ps1` after committing: it compares against the git empty
+tree, so it checks all committed content rather than only the working-tree
+diff.
 
 `scan-private-markers.ps1` blocks common secret prefixes (OpenAI, GitHub, Slack,
 AWS, Google, Stripe, and PEM private-key forms), private path markers,
@@ -142,7 +138,9 @@ leaks. It is a best-effort guard and does not guarantee detection of every
 secret format, so keep secrets out of the repository regardless of a passing
 scan. `assert-oss-ready.ps1` checks the skill front matter, required public
 project files, required README sections, broken local Markdown links, mojibake,
-and placeholder markers.
+and placeholder markers. `tests/scan-private-markers.Tests.ps1` is a
+dependency-free regression suite covering the scanner's detection, redaction,
+and false-positive guards; run it whenever the scanner changes.
 
 Use your agent runtime's skill validator as an additional check when one is
 available.
