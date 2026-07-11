@@ -19,6 +19,27 @@ browser binaries, screenshots, icons, or third-party media.
 
 ## What It Solves
 
+Browser automation capability is widely available; reporting discipline is not.
+This skill is a pre-claim evidence contract: it defines when an agent may claim
+that browser verification happened, independent of which tool performed the
+verification (Playwright scripts, MCP browser tools, or an in-app browser).
+Capability layers such as Playwright MCP or Chrome DevTools MCP are
+complementary: they provide observation, while this skill constrains what may
+be claimed from those observations.
+
+The contract has three parts:
+
+- Bounded execution: every server start, health check, browser wait, and
+  cleanup step has a finite timeout, a retry limit, and a cleanup path that
+  runs on success, failure, and timeout.
+- Truthful reporting: verification categories that were not performed are
+  reported as `未確認`, never as passed.
+- Evidence separation: verification categories do not imply each other. A green
+  build is not UI verification, a DOM node is not a rendered chart, and a hover
+  check is not a focus check.
+
+Typical failure modes this contract targets:
+
 - Foreground `npm run dev`, Vite, Next.js, or similar servers blocking an agent
   turn.
 - Unbounded waits, infinite polling, and forgotten cleanup.
@@ -26,6 +47,10 @@ browser binaries, screenshots, icons, or third-party media.
 - Reports that claim screenshots, console checks, network checks, or responsive
   checks that were not actually performed.
 - Missing evidence for 390 px, 768 px, and 1280 px-plus viewport checks.
+
+The skill is a reporting contract, not an enforcement engine. It does not
+prevent a determined over-claim by itself; it makes over-claiming explicit and
+easier to detect by requiring `未確認` as a first-class reporting term.
 
 ## Install
 

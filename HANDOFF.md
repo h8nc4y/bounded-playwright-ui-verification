@@ -9,12 +9,14 @@
 - **`AGENTS.md` が Codex 向けの恒久運用契約（主開発者として自走するためのルール）。** Codex CLI がリポジトリ直下の `AGENTS.md` を自動で読み込む。日々の作業ルール・4ゲート・レビュー方針・ブリーフ雛形はすべてそこにある。
 - 本 `HANDOFF.md` は現状スナップショットと検証記録。残タスク台帳は `TASKS_BACKLOG.md`。
 
-## 現状サマリ（2026-07-03 ClaudeCode Fable5 引き継ぎ更新時点）
+## 現状サマリ（2026-07-11 ClaudeCode 引き継ぎ更新時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上にある。
-- Codex 自走のための運用契約 `AGENTS.md` があり、`TASKS_BACKLOG.md` と本 `HANDOFF.md` を併用する。
+- Codex 自走のための運用契約 `AGENTS.md` があり、`TASKS_BACKLOG.md` と本 `HANDOFF.md` を併用する。ClaudeCode 司令塔向けの引き継ぎは `docs/CLAUDECODE_HANDOFF.md`（PR #15 merge `1dc05b2`）。
+- T-016（R-6）で README「What It Solves」に pre-claim evidence contract の 3 契約（bounded execution / truthful reporting / evidence separation）を文言明確化として反映済み。対象範囲・Non-Goals・判定基準は不変。
+- 再要件定義ドラフト §6 の R-1〜R-5 は `TASKS_BACKLOG.md` の T-018〜T-022 へ展開済み。T-021（R-5: 非 Windows `pwsh` 実機検証）以外は質問リスト（D1〜D4 / O1〜O3）への人間の回答がゲートで blocked。
 - T-004 / T-005 / T-006 / T-008 / T-009 / T-010 / T-011 / T-012 / T-014 は完了済み。T-012 は PR #11 merge `822d000` で `examples/blank-render-target-report.md` に反映済み。T-014 は PR #13 merge `f8ce586` で `examples/hover-focus-state-report.md` として `main` に反映済み。公開 docs の whitespace check は CI と同じ空ツリー比較へ統一され、`CHANGELOG.md` は `Unreleased` と `0.1.0 - 2026-06-06` に分離され、非 Windows shell 向けの `pwsh` 実行形式も明記された。`examples/evidence-matrix.md` / `examples/failed-verification-report.md` / `examples/protected-route-report.md` / `examples/responsive-overflow-report.md` / `examples/blank-render-target-report.md` / `examples/hover-focus-state-report.md` には、合成データだけで完了・失敗・blocked・protected route 未確認・responsive overflow・blank render target・hover/focus state separation を分ける browser evidence 記録例を追加済み。
-- open GitHub issue / open PR は無し（2026-07-01 12:33 JST に `gh issue list` / `gh pr list` で確認）。
+- open GitHub issue / open PR は無し（2026-07-11 に `gh issue list` / `gh pr list` で確認）。
 - 古い `feature/oss-readiness`、`docs/align-whitespace-check`、`docs/update-changelog-v0-1-0`、`docs/portable-pwsh-validation` はマージ済みで、リモート追跡 ref も prune 済み。
 - `main` はブランチ保護が有効で、必須ステータスチェック「Validate repository」（CI）の通過を要求する。変更は PR を開いて CI を緑にしてからマージするのが基本（`AGENTS.md` §9 参照）。
 - スナップショットは陳腐化する。実際の状態は `git status` / `gh pr list` / `gh issue list` で都度確認すること。
@@ -38,7 +40,9 @@
 | T-011: responsive overflow report example を追加 | PR #10 merge `12e1bbd` | 390 px の横スクロールと focus clipping を console/network 結果と混ぜずに報告する合成例を追加。 |
 | T-012: blank render target report example を追加 | PR #11 merge `822d000` | canvas/chart がDOM上は存在してもblankなら描画成功と報告しない合成例を追加。 |
 | T-014: hover/focus state report example を追加 | PR #13 merge `f8ce586` | pointer hover と keyboard focus / active / disabled state の証跡を混同しない合成例を追加。 |
-| T-015: 再要件定義ドラフト（価値・差別化・証跡粒度）を追加 | 本 PR | `docs/requirements-redefinition-2026-07.md`。市場調査と相談レビューを反映した提案ドラフト。§14④ 該当項目は質問リストに隔離。 |
+| T-015: 再要件定義ドラフト（価値・差別化・証跡粒度）を追加 | PR #14 merge `d8a209c` | `docs/requirements-redefinition-2026-07.md`。市場調査と相談レビューを反映した提案ドラフト。§14④ 該当項目は質問リストに隔離。 |
+| post-Fable5 司令塔引き継ぎ文書を追加 | PR #15 merge `1dc05b2` | `docs/CLAUDECODE_HANDOFF.md`。固定モデル名を使わない役割分担と次アクション候補。 |
+| T-016: README「What It Solves」へ価値定式化を反映（R-6） | 本 PR | 3 契約とレイヤー補完の位置づけを文言明確化として追記。scope / Non-Goals / 判定基準は不変。 |
 
 ## 既知の問題・残懸念
 
@@ -68,6 +72,16 @@
 | typecheck / build | 該当コマンドなし | 未確認 |
 | UI / browser verification | フロント UI なし | 未確認 |
 
+2026-07-11 の T-016（README 価値定式化）+ T-017（current-state 同期）後に下記を実行した（`AGENTS.md` §6 と同形）。
+
+| 種別 | コマンド | 結果 |
+| --- | --- | --- |
+| private marker scan | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/scan-private-markers.ps1` | pass: `Private marker scan passed: no disallowed markers found.` |
+| OSS readiness | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/assert-oss-ready.ps1` | pass: `OSS readiness check passed.` |
+| whitespace lint | `git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD` | pass: exit 0、出力なし |
+| typecheck / build | 該当コマンドなし | 未確認 |
+| UI / browser verification | フロント UI なし | 未確認 |
+
 ## セットアップ・検証コマンド
 
 ```powershell
@@ -86,7 +100,7 @@ git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
 
 ## 次にやるべき候補
 
-- 生きた候補一覧は `AGENTS.md` §5 と `TASKS_BACKLOG.md` を参照。2026-07-03 時点で T-001〜T-015 はすべて `done`。
-- **最優先**: `docs/requirements-redefinition-2026-07.md` の質問リスト（決定軸 D1〜D4・運営判断 O1〜O3）への人間の回答。回答に応じて R-2〜R-4・R-6 が着手可能になる。
-- 回答待ちの間に安全に進められる候補は、`pwsh` 手順の非 Windows 実機検証記録（R-5）、または既存 examples の追加的な synthetic scenario 拡充。ただし実機環境が無い場合は `未確認` と明記する。
+- 生きた候補一覧は `AGENTS.md` §5 と `TASKS_BACKLOG.md` を参照。2026-07-11 時点で T-001〜T-017 は `done`、T-018〜T-020 / T-022 は質問リスト回答待ちで `blocked`、T-021（R-5）のみ `open`。
+- **最優先**: `docs/requirements-redefinition-2026-07.md` の質問リスト（決定軸 D1〜D4・運営判断 O1〜O3）への人間の回答。回答が得られたら T-018〜T-020 / T-022 の `blocked` を解除して着手する。
+- 回答待ちの間に安全に進められる候補は、T-021（`pwsh` 手順の非 Windows 実機検証記録。実機環境が無い場合は `未確認` を維持）、または既存 examples の追加的な synthetic scenario 拡充。
 - 着手前に `TASKS_BACKLOG.md` へ優先度・規模・状態付きで追記し、`AGENTS.md` の自走ループ（§4）と4ゲート（§14）に従う。
