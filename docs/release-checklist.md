@@ -14,10 +14,13 @@ Use this checklist before tagging or publishing a repository update.
 
 ## Local Checks
 
+Run the same four steps CI runs (`check-whitespace.ps1` after committing):
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\scan-private-markers.Tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-whitespace.ps1
 ```
 
 On non-Windows shells, use PowerShell 7+ as `pwsh`; run each script with

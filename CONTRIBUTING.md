@@ -22,17 +22,21 @@ dependencies.
 
 ## Local Development
 
-Run these checks before opening a pull request:
+Run these checks before opening a pull request. They are the same four steps
+CI runs:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scan-private-markers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\scan-private-markers.Tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\assert-oss-ready.ps1
-git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-whitespace.ps1
 ```
 
 If your shell cannot execute PowerShell scripts directly, use PowerShell 7+ as
 `pwsh -NoProfile -File ./scripts/<script-name>.ps1`. Windows contributors can
-also use Windows PowerShell 5.1 with the command form above.
+also use Windows PowerShell 5.1 with the command form above. Run
+`check-whitespace.ps1` after committing; it checks all committed content
+against the git empty tree.
 
 ## Documentation Style
 

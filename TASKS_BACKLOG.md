@@ -1,60 +1,48 @@
 # TASKS_BACKLOG.md
 
+残タスクの生きた台帳。新タスクは着手前にこの表へ優先度・規模・状態付きで追記し、
+完了したら `done` に更新する（`AGENTS.md` §5）。完了タスクの詳細な経緯は
+`git log` / `CHANGELOG.md` / マージ済み PR を参照する。
+
 ## バックログ
 
 | ID | タスク名 | 出典 | 優先度 | 規模 | 状態 |
 | --- | --- | --- | --- | --- | --- |
-| T-001 | 棚卸し結果を `TASKS_BACKLOG.md` に記録する | 2026-06-11 の棚卸し作業 | 高 | S | done |
-| T-002 | Claude Code 向けの引き継ぎ情報を `HANDOFF.md` に記録する | 2026-06-13 の締め作業 | 高 | S | done |
-| T-003 | Codex 自走運用契約 `AGENTS.md` を整備し、scan 除外を堅牢化する | 2026-06-20 の引き継ぎ整備 | 高 | M | done |
-| T-004 | 公開 docs の `git diff --check` 表記を CI と同形に揃える | `AGENTS.md` §5 / レビュー指摘 | 中 | S | done |
-| T-005 | `CHANGELOG.md` を `v0.1.0` タグとタグ後変更に整合させる | `AGENTS.md` §5 / changelog 確認 | 中 | S | done |
-| T-006 | 非 Windows 寄稿者向けの `pwsh` 検証手順を明確化する | `AGENTS.md` §5 / portable validation | 中 | S | done |
-| T-007 | `HANDOFF.md` を T-004〜T-006 完了後の状態へ同期する | 自走更新後の handoff 整備 | 中 | S | done |
-| T-008 | 合成 evidence matrix example を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
-| T-009 | browser verification の失敗時報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
-| T-010 | login/OAuth で保護routeが blocked になった時の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
-| T-011 | responsive overflow の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
-| T-012 | blank render target の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
-| T-013 | PR #11 後の current-state を `HANDOFF.md` / `TASKS_BACKLOG.md` に同期する | PR #11 merge 後の文書drift | 中 | S | done |
-| T-014 | hover/focus state の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
-| T-015 | 価値・差別化・証跡粒度の再要件定義ドラフトを `docs/` に追加する | 2026-07-03 Fable5 引き継ぎ / prompt addendum | 高 | M | done |
-| T-016 | R-6: README「What It Solves」へ pre-claim evidence contract の文言明確化を反映する | `docs/requirements-redefinition-2026-07.md` §6 R-6 | 中 | S | done |
-| T-017 | 2026-07-11 時点の current-state を `HANDOFF.md` / `TASKS_BACKLOG.md` へ同期する | Codex 引き継ぎ整備 | 中 | S | done |
-| T-018 | R-2: verdict 4値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化する | 再要件定義ドラフト §6 R-2 | 高 | S | blocked (D2 回答待ち) |
-| T-019 | R-3: MCP ツール経由の検証経路を examples または `SKILL.md` に追記する | 再要件定義ドラフト §6 R-3 | 中 | M | blocked (D4 回答待ち) |
-| T-020 | R-4: sparse claim ledger の合成 example を追加する | 再要件定義ドラフト §6 R-4 | 中 | S | blocked (D3 回答待ち) |
-| T-021 | R-5: 非 Windows `pwsh` 実機検証を記録する（実機が無い間は `未確認` を維持） | 再要件定義ドラフト §6 R-5 | 低 | S | open |
-| T-022 | R-1: 質問リスト回答後に要件正本（REQUIREMENTS 相当）を整備する | 再要件定義ドラフト §6 R-1 | 高 | M | blocked (D1〜D4 / O1〜O3 回答待ち) |
+| T-001 | 棚卸し結果を `TASKS_BACKLOG.md` に記録する | 2026-06-11 棚卸し | 高 | S | done |
+| T-002 | 引き継ぎ情報を `HANDOFF.md` に記録する | 2026-06-13 締め作業 | 高 | S | done |
+| T-003 | Codex 自走運用契約 `AGENTS.md` を整備し、scan 除外を堅牢化する | 2026-06-20 引き継ぎ整備 | 高 | M | done |
+| T-004 | 公開 docs の whitespace check 表記を CI と同形に揃える | `AGENTS.md` §5 | 中 | S | done |
+| T-005 | `CHANGELOG.md` を `v0.1.0` タグとタグ後変更に整合させる | `AGENTS.md` §5 | 中 | S | done |
+| T-006 | 非 Windows 寄稿者向けの `pwsh` 検証手順を明確化する | `AGENTS.md` §5 | 中 | S | done |
+| T-007 | `HANDOFF.md` を T-004〜T-006 完了後の状態へ同期する | handoff 整備 | 中 | S | done |
+| T-008 | 合成 evidence matrix example を追加する | examples 拡充 | 中 | S | done |
+| T-009 | browser verification の失敗時報告例を追加する | examples 拡充 | 中 | S | done |
+| T-010 | login/OAuth で保護 route が blocked になる合成報告例を追加する | examples 拡充 | 中 | S | done |
+| T-011 | responsive overflow の合成報告例を追加する | examples 拡充 | 中 | S | done |
+| T-012 | blank render target の合成報告例を追加する | examples 拡充 | 中 | S | done |
+| T-013 | PR #11 後の current-state を handoff / 台帳に同期する | 文書 drift | 中 | S | done |
+| T-014 | hover/focus state の合成報告例を追加する | examples 拡充 | 中 | S | done |
+| T-015 | 価値・差別化・証跡粒度の再要件定義ドラフトを `docs/` に追加する | 2026-07-03 引き継ぎ | 高 | M | done |
+| T-016 | R-6: README「What It Solves」へ pre-claim evidence contract の文言明確化を反映する | 再定義ドラフト §6 | 中 | S | done |
+| T-017 | 2026-07-11 時点の current-state を handoff / 台帳へ同期する | Codex 引き継ぎ整備 | 中 | S | done |
+| T-018 | R-2: verdict 4値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化する | 再定義ドラフト §6 | 高 | S | blocked (D2 回答待ち) |
+| T-019 | R-3: MCP ツール経由の検証経路を examples または `SKILL.md` に追記する | 再定義ドラフト §6 | 中 | M | blocked (D4 回答待ち) |
+| T-020 | R-4: sparse claim ledger の合成 example を追加する | 再定義ドラフト §6 | 中 | S | blocked (D3 回答待ち) |
+| T-021 | R-5: 非 Windows `pwsh` 実機検証を記録する（実機が無い間は `未確認` を維持） | 再定義ドラフト §6 | 低 | S | open |
+| T-022 | R-1: 質問リスト回答後に要件正本（REQUIREMENTS 相当）を整備する | 再定義ドラフト §6 | 高 | M | blocked (D1〜D4 / O1〜O3 回答待ち) |
+| T-023 | 引き継ぎ文書の一本化と check:all 文書の CI 同形化（4ステップ） | 2026-07-12 資料整理 | 中 | M | done |
+| T-024 | scanner に tracked-only 走査モード（`-TrackedOnly`）を追加する | scanner hardening 提案（`914aee1` 時の残提案） | 中 | M | blocked (§14④ 人間承認待ち) |
 
-> 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
+## 補足メモ
 
-## 情報源の確認結果
-
-| 情報源 | 結果 |
-| --- | --- |
-| 既存タスク管理ファイル | このファイルを追加する前に、既存のタスク管理ファイルは見つからなかった。 |
-| README と docs | `README.md`、`docs/release-checklist.md`、contribution guidance には再利用できる検証手順があるが、現時点で新たに実装すべき未完了項目は見つからなかった。 |
-| repository-local `AGENTS.md` と `.codex` | `AGENTS.md` は存在し、このリポジトリの自走運用契約として適用中。repo-local `.codex` は該当なし。 |
-| コードコメント | 該当なし。限定的な placeholder comment 検索で該当なし。 |
-| ローカル検証 | 2026-07-01 current-state sync branchで `scan-private-markers.ps1`、`assert-oss-ready.ps1`、CI同形の空ツリー比較 `git diff --check` がpass。最終結果は `HANDOFF.md` に記録。 |
-| Git 状態と WIP branch | 2026-07-01 12:33 JST時点で `main...origin/main` clean。古い通常作業branchは整理済みで、PR #11 merge `822d000` まで反映済み。 |
-| GitHub issues / PRs | 2026-07-01 12:33 JST時点で open issue / open PR は0件。 |
-
-## メモ
-
-- 進行中状態のタスクは残っていない。
-- 📌 2026-06-28 Codex 実装: `examples/protected-route-report.md` を追加し、ログイン/OAuth 境界で protected UI を過大報告せず `未確認` として残す合成例を README / CHANGELOG と同期した。
-- 📌 2026-06-30 Codex 実装: `examples/responsive-overflow-report.md` を追加し、390px の横スクロールと focus clipping を console/network 結果と混ぜずに報告する合成例を README / CHANGELOG と同期した。
-- 📌 2026-06-30 Codex 実装: `examples/blank-render-target-report.md` を追加し、DOM load / console / network が緑でも主要canvas/chartがblankなら描画成功と報告しない合成例を README / CHANGELOG と同期した。
-- 📌 2026-07-01 Codex 同期: PR #11 merge `822d000` 後の current-state を HANDOFF / TASKS_BACKLOG に反映し、repo-local `AGENTS.md` の存在と open issue / open PR 0件を再確認した。
-- 📌 2026-07-03 Fable5 実装: T-014 を PR #13 で `main` へマージ。`docs/requirements-redefinition-2026-07.md` を追加し、価値の再定式化（pre-claim evidence contract）、差別化レイヤーモデル、sparse claim ledger 型の証跡粒度、人間への質問リスト（D1〜D4 / O1〜O3）を提案。§14④ 該当項目は質問リストに隔離し、承認まで既存正本を変更しない。
-- 📌 2026-07-02 Codex 実装: `examples/hover-focus-state-report.md` を追加し、hover / focus / active / disabled state を混同せず、keyboard reachability failure を独立して報告する合成例を README / CHANGELOG と同期した。
-- 📌 2026-07-11 ClaudeCode 実装: T-016（R-6）として README「What It Solves」へ pre-claim evidence contract の 3 契約（bounded execution / truthful reporting / evidence separation）とレイヤー補完の位置づけを文言明確化として反映した。対象範囲・Non-Goals・判定基準は変更していない（`AGENTS.md` §10 の自走可能範囲）。あわせて T-018〜T-022 として再要件定義ドラフト §6 の R-1〜R-5 を本表へ展開した。blocked のタスクは `docs/requirements-redefinition-2026-07.md` §5 の質問リスト（D1〜D4 / O1〜O3）への人間の回答がゲート。
-- `skip` 状態のタスクは残っていない。
-- 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
-
-- 📌 2026-06-21 Claude Code 再レビュー: High 指摘の advisory はローカル検証領域へ退避済み（着手前にコスト・secret・要件ゲート④の境界を確認）。横断索引: `CLAUDE_CODE_REVIEW_INDEX_2026-06-21.md`。
-
-
-- 🔧 2026-06-21 Claude Code 実装: `fix/claude-scanner-hardening` ブランチに修正をコミット済み（base docs/add-evidence-matrix-example@c444e16、Codex作業ツリーは未変更）。検証/統合手順は Projectsルート `CLAUDE_FIX_BRANCHES_2026-06-21.md` 参照。
+- **T-018〜T-020 / T-022 のゲート**: `docs/requirements-redefinition-2026-07.md` §5 の
+  質問リスト（D1〜D4 / O1〜O3）への人間の回答。回答が出たら blocked を解除して着手する。
+- **T-024 の提案概要**: `scan-private-markers.ps1` に `param([switch]$TrackedOnly)` を追加し、
+  有効時は `git ls-files -z` の結果のみを走査対象にする。CI は checkout 済み tracked のみ
+  なので CI で既定有効にすると手元/CI の対象が一致する。走査対象という**振る舞いの変更**
+  （「scan passed」の意味が変わる）を伴うため §14④ ゲート。承認時は README / CHANGELOG /
+  HANDOFF に対象の変更を明記する。詳細な検討記録は git 履歴の `NOTES_CLAUDE.md`
+  （2026-07-12 に整理・削除済み）を参照。
+- scanner hardening（秘匿値 regex 拡充・self-exempt hole 修正・CI shell の pwsh 統一・
+  回帰テスト `tests/scan-private-markers.Tests.ps1` 追加）は `914aee1`（2026-06-21）で
+  マージ済み。

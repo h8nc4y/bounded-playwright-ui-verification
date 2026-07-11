@@ -1,6 +1,7 @@
 # 再要件定義ドラフト — 価値・差別化・証跡粒度（2026-07）
 
 作成: ClaudeCode Fable5（2026-07-03）。相談レビュー: Codex GPT-5.5（同日・条件付き Go）。
+更新: 2026-07-12（§1 の事実を現況へ同期。提案内容と質問リストの意味は不変）。
 位置づけ: これは**提案ドラフト**であり、`AGENTS.md` §10 の不変条件（製品要件）を変更するものではない。
 意味を変える項目は §14④ ゲートとして「人間への質問」節に隔離した。
 
@@ -8,13 +9,16 @@
 
 ### 確認済み（local git / repo docs / GitHub live で確認）
 
-- `main` は release-ready。T-001〜T-014 done。examples は 9 本（checklist / report template /
+- `main` は release-ready。T-001〜T-017 done。examples は 9 本（checklist / report template /
   server runbook / evidence matrix / failed / protected route / responsive overflow /
   blank render target / hover-focus state）。
+- 本ドラフト §6 の R-6（README「What It Solves」への価値定式化の反映）は T-016 として
+  実装済み。残る R-1〜R-5 は `TASKS_BACKLOG.md` の T-018〜T-022 に対応する。
 - 現物の主成果物は `SKILL.md`（運用規律の文書）であり、UI 検証を実行するコードは同梱しない。
-  `scripts/` はリポジトリ自身の OSS 健全性チェックであって UI 検証スクリプトではない。
+  `scripts/` はリポジトリ自身の OSS 健全性チェックであって UI 検証スクリプトではない
+  （`tests/` の回帰テストも scanner 自身のためのもの）。
 - ブランチ保護 + 必須 CI「Validate repository」が有効。open issue / open PR 0 件
-  （2026-07-03 に `gh` で確認）。
+  （2026-07-12 に `gh` で確認）。
 
 ### 未確認
 
@@ -143,16 +147,16 @@ sparse claim ledger を提案する。
 | O2 | skill マーケットプレイス / ディレクトリへの掲載意向はあるか（現 Non-Goals は GitHub Marketplace 掲載なしを明記。変更は §14④）。 | 掲載するなら差別化点の英語での明文化が前提タスクになる。 |
 | O3 | ゼロ円運用（local + GitHub Actions 無料枠、有料サービス不使用）を今後も維持でよいか。 | 維持なら現 Non-Goals のまま。 |
 
-## 6. タスク分解案（承認結果に応じて `TASKS_BACKLOG.md` へ転記）
+## 6. タスク分解案（`TASKS_BACKLOG.md` へ転記済み）
 
-| 仮ID | 内容 | ゲート | 規模 |
+| 仮ID | 内容 | ゲート | 台帳 ID / 状態 |
 | --- | --- | --- | --- |
-| R-1 | 本ドラフトを起点に要件正本（REQUIREMENTS 相当）を整備 | 自走可（提案までは） | M |
-| R-2 | verdict 4 値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化 | D2 承認後 | S |
-| R-3 | MCP ツール経由の検証経路を examples または `SKILL.md` に追記 | D4 の判断後 | M |
-| R-4 | sparse claim ledger の合成 example を追加（evidence-matrix の一般化） | D3 の tier 方針決定後 | S |
-| R-5 | 非 Windows `pwsh` 実機検証の記録（実機が無い間は `未確認` を維持） | 自走可 | S |
-| R-6 | 差別化レイヤーモデル・価値定式化を README「What It Solves」へ反映 | 文言明確化なら自走可 | S |
+| R-1 | 本ドラフトを起点に要件正本（REQUIREMENTS 相当）を整備 | 質問リスト回答後 | T-022 / blocked |
+| R-2 | verdict 4 値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化 | D2 承認後 | T-018 / blocked |
+| R-3 | MCP ツール経由の検証経路を examples または `SKILL.md` に追記 | D4 の判断後 | T-019 / blocked |
+| R-4 | sparse claim ledger の合成 example を追加（evidence-matrix の一般化） | D3 の tier 方針決定後 | T-020 / blocked |
+| R-5 | 非 Windows `pwsh` 実機検証の記録（実機が無い間は `未確認` を維持） | 自走可 | T-021 / open |
+| R-6 | 差別化レイヤーモデル・価値定式化を README「What It Solves」へ反映 | 文言明確化なら自走可 | T-016 / done |
 
 ## 7. 本ドラフトの扱い
 
