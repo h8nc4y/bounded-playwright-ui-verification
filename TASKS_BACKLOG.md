@@ -19,6 +19,13 @@
 | T-013 | PR #11 後の current-state を `HANDOFF.md` / `TASKS_BACKLOG.md` に同期する | PR #11 merge 後の文書drift | 中 | S | done |
 | T-014 | hover/focus state の合成報告例を `examples/` に追加する | `HANDOFF.md` 次候補 / examples 拡充 | 中 | S | done |
 | T-015 | 価値・差別化・証跡粒度の再要件定義ドラフトを `docs/` に追加する | 2026-07-03 Fable5 引き継ぎ / prompt addendum | 高 | M | done |
+| T-016 | R-6: README「What It Solves」へ pre-claim evidence contract の文言明確化を反映する | `docs/requirements-redefinition-2026-07.md` §6 R-6 | 中 | S | done |
+| T-017 | 2026-07-11 時点の current-state を `HANDOFF.md` / `TASKS_BACKLOG.md` へ同期する | Codex 引き継ぎ整備 | 中 | S | done |
+| T-018 | R-2: verdict 4値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化する | 再要件定義ドラフト §6 R-2 | 高 | S | blocked (D2 回答待ち) |
+| T-019 | R-3: MCP ツール経由の検証経路を examples または `SKILL.md` に追記する | 再要件定義ドラフト §6 R-3 | 中 | M | blocked (D4 回答待ち) |
+| T-020 | R-4: sparse claim ledger の合成 example を追加する | 再要件定義ドラフト §6 R-4 | 中 | S | blocked (D3 回答待ち) |
+| T-021 | R-5: 非 Windows `pwsh` 実機検証を記録する（実機が無い間は `未確認` を維持） | 再要件定義ドラフト §6 R-5 | 低 | S | open |
+| T-022 | R-1: 質問リスト回答後に要件正本（REQUIREMENTS 相当）を整備する | 再要件定義ドラフト §6 R-1 | 高 | M | blocked (D1〜D4 / O1〜O3 回答待ち) |
 
 > 生きた候補一覧は `AGENTS.md` §5 を正本とする。新タスクは着手前にこの表へ追記する。
 
@@ -43,6 +50,7 @@
 - 📌 2026-07-01 Codex 同期: PR #11 merge `822d000` 後の current-state を HANDOFF / TASKS_BACKLOG に反映し、repo-local `AGENTS.md` の存在と open issue / open PR 0件を再確認した。
 - 📌 2026-07-03 Fable5 実装: T-014 を PR #13 で `main` へマージ。`docs/requirements-redefinition-2026-07.md` を追加し、価値の再定式化（pre-claim evidence contract）、差別化レイヤーモデル、sparse claim ledger 型の証跡粒度、人間への質問リスト（D1〜D4 / O1〜O3）を提案。§14④ 該当項目は質問リストに隔離し、承認まで既存正本を変更しない。
 - 📌 2026-07-02 Codex 実装: `examples/hover-focus-state-report.md` を追加し、hover / focus / active / disabled state を混同せず、keyboard reachability failure を独立して報告する合成例を README / CHANGELOG と同期した。
+- 📌 2026-07-11 ClaudeCode 実装: T-016（R-6）として README「What It Solves」へ pre-claim evidence contract の 3 契約（bounded execution / truthful reporting / evidence separation）とレイヤー補完の位置づけを文言明確化として反映した。対象範囲・Non-Goals・判定基準は変更していない（`AGENTS.md` §10 の自走可能範囲）。あわせて T-018〜T-022 として再要件定義ドラフト §6 の R-1〜R-5 を本表へ展開した。blocked のタスクは `docs/requirements-redefinition-2026-07.md` §5 の質問リスト（D1〜D4 / O1〜O3）への人間の回答がゲート。
 - `skip` 状態のタスクは残っていない。
 - 新しい issue、検証失敗、具体的な要求が出た場合は、実装前に上の表へ優先度・規模・状態付きで追記する。
 

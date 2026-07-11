@@ -4,6 +4,11 @@ All notable changes to this project are recorded here.
 
 ## Unreleased
 
+- Clarified the README "What It Solves" section with the pre-claim evidence
+  contract framing (bounded execution / truthful reporting / evidence
+  separation) and the complementary positioning against browser capability
+  layers. Wording clarification only; scope, non-goals, and judgment criteria
+  are unchanged.
 - Added a synthetic hover/focus state verification report example for separating pointer, keyboard, active, and disabled-state evidence.
 - Added a synthetic blank-render-target verification report example for canvas/chart surfaces that load but do not visibly draw.
 - Added a synthetic protected-route verification report example for login/OAuth blocked states.
