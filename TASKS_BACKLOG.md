@@ -46,3 +46,11 @@
 - scanner hardening（秘匿値 regex 拡充・self-exempt hole 修正・CI shell の pwsh 統一・
   回帰テスト `tests/scan-private-markers.Tests.ps1` 追加）は `914aee1`（2026-06-21）で
   マージ済み。
+
+## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
+
+読取専用レビュー（実行検証なし）の指摘。採否と実装は次担当が判断する。完了時は行頭を [x] にし、対応PRを追記する。
+
+- [ ] scan-private-markers.ps1:30-32 — 検出パターン定義に実private値(private repo slug/ローカル絶対パス)が分割literalで残存(公開repo上で人間には読める)。018方式(.private-markers.local外部ロード)か017方式(汎用regex)へ — オーナー裁定待ち。
+- [ ] 同:106 — 019のみ全working-tree走査(他repoはgit-tracked優先へ移行済み)。git-trackedモード追加。confidence高
+- [ ] SKILL.md:104 — waitUntil networkidleはPlaywright公式がdiscourage(timeout有界で実害小)。loadへの変更+明示待ち推奨。confidence中
