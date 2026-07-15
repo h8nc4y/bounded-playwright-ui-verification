@@ -91,15 +91,19 @@ const viewports = [
 
 const findings = [];
 
+// Register the console listener once, outside the viewport loop. Registering
+// inside the loop stacks duplicate listeners and misattributes console events
+// from later viewports to earlier findings entries.
+let consoleMessages = [];
+page.on("console", (message) => {
+  if (["error", "warning"].includes(message.type())) {
+    consoleMessages.push(`${message.type()}: ${message.text()}`);
+  }
+});
+
 for (const viewport of viewports) {
   await page.setViewportSize({ width: viewport.width, height: viewport.height });
-
-  const consoleMessages = [];
-  page.on("console", (message) => {
-    if (["error", "warning"].includes(message.type())) {
-      consoleMessages.push(`${message.type()}: ${message.text()}`);
-    }
-  });
+  consoleMessages = [];
 
   await page.goto(targetUrl, { waitUntil: "networkidle", timeout: 15000 });
 
@@ -115,7 +119,9 @@ for (const viewport of viewports) {
     hasHorizontalScroll:
       metrics.scrollWidth > metrics.innerWidth ||
       metrics.bodyScrollWidth > metrics.innerWidth,
-    consoleMessages,
+    // Snapshot so the shared array reset for the next viewport cannot mutate
+    // this findings entry.
+    consoleMessages: [...consoleMessages],
   });
 }
 ```
