@@ -17,7 +17,7 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
 
 1. `AGENTS.md` — 恒久運用契約（自走ループ §4、check:all §6、4ゲート §14）
 2. 本 `HANDOFF.md` — 現況スナップショット
-3. `TASKS_BACKLOG.md` — 残タスク台帳（T-018〜T-024 が現役）
+3. `TASKS_BACKLOG.md` — 残タスク台帳（T-018〜T-020 / T-022 / T-024 が現役）
 4. `docs/requirements-redefinition-2026-07.md` — 要件再定義ドラフトと未回答の質問リスト
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
@@ -27,14 +27,21 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 / T-021 / T-023 と scanner hardening（`914aee1`）は完了。詳細な完了履歴は
+- T-001〜T-017 / T-021 / T-023 / T-025 と scanner hardening（`914aee1`）は完了。詳細な完了履歴は
   `TASKS_BACKLOG.md` の表と `git log` / `CHANGELOG.md` を参照（本ファイルには重複させない）。
 - **最大のゲート**: `docs/requirements-redefinition-2026-07.md` §5 の質問リスト
   （決定軸 D1〜D4・運営判断 O1〜O3）が人間の回答待ち。回答が出るまで
   T-018〜T-020 / T-022 は blocked。scanner の tracked-only 走査モード（T-024）も
   §14④ ゲートで人間承認待ち。
-- 回答待ちの間は、既存スコープ内の examples 合成シナリオ拡充と、外部レビュー指摘のうち
-  製品要件を変えない安全側の修正を自走候補とする。
+- 外部レビューの非 gate 指摘（Playwright 推奨例の `networkidle`）は T-025 / PR #22 で対応。
+  残る scanner 2件はオーナー裁定または §14④ gate の対象。
+
+## 次の一手
+
+1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
+   private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
+2. **Codex（回答待ちに自走可）**: 既存スコープ内の合成 example を拡充する。着手時に
+   具体的なシナリオを `TASKS_BACKLOG.md` へ追加し、製品要件の意味は変えない。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -64,6 +71,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
 
 - macOS と native Linux host での `pwsh` 実機動作は `未確認`。Linux コンテナ上の動作は
   T-021 で確認済み。
+- 導入先の route/state 固有 readiness locator は本リポジトリでは決定できないため、
+  `SKILL.md` の合成例を各 UI に合わせて置き換える必要がある。
 - 外部利用者の存在・利用実態（star / fork / 転用事例）は `未確認`。
 - examples はすべて合成データ。実プロジェクトへ転用するときは route / URL / fixture /
   browser evidence を各案件の実測に置き換える。

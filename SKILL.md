@@ -101,11 +101,16 @@ page.on("console", (message) => {
   }
 });
 
+// Replace this with a route/state-specific locator that proves the UI under
+// review is ready for inspection.
+const readyLocator = page.getByRole("main");
+
 for (const viewport of viewports) {
   await page.setViewportSize({ width: viewport.width, height: viewport.height });
   consoleMessages = [];
 
-  await page.goto(targetUrl, { waitUntil: "networkidle", timeout: 15000 });
+  await page.goto(targetUrl, { waitUntil: "load", timeout: 15000 });
+  await readyLocator.waitFor({ state: "visible", timeout: 10000 });
 
   const metrics = await page.evaluate(() => ({
     innerWidth: window.innerWidth,
@@ -125,6 +130,12 @@ for (const viewport of viewports) {
   });
 }
 ```
+
+[Playwright discourages using `networkidle`](https://playwright.dev/docs/api/class-page#page-goto-option-wait-until)
+to decide that a page is ready for testing. Use a bounded navigation wait, then
+wait for a route/state-specific locator or web-first assertion with its own
+explicit finite timeout. Replace the `main` landmark above with a readiness
+condition that is meaningful for the UI under review.
 
 Use screenshots as evidence for visual fit. Numeric checks help catch issues, but
 they do not overrule visible clipping, overlap, unreadable text, or broken
