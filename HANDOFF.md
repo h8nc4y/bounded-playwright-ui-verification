@@ -22,19 +22,19 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
 
-## 現状サマリ（2026-07-12 時点）
+## 現状サマリ（2026-07-22 時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 と scanner hardening（`914aee1`）は完了。詳細な完了履歴は
+- T-001〜T-017 / T-021 / T-023 と scanner hardening（`914aee1`）は完了。詳細な完了履歴は
   `TASKS_BACKLOG.md` の表と `git log` / `CHANGELOG.md` を参照（本ファイルには重複させない）。
 - **最大のゲート**: `docs/requirements-redefinition-2026-07.md` §5 の質問リスト
   （決定軸 D1〜D4・運営判断 O1〜O3）が人間の回答待ち。回答が出るまで
   T-018〜T-020 / T-022 は blocked。scanner の tracked-only 走査モード（T-024）も
   §14④ ゲートで人間承認待ち。
-- 回答待ちの間に自走できるのは T-021（非 Windows `pwsh` 実機検証。実機が無い場合は
-  `未確認` を維持）と、既存スコープ内の examples 合成シナリオ拡充のみ。
+- 回答待ちの間は、既存スコープ内の examples 合成シナリオ拡充と、外部レビュー指摘のうち
+  製品要件を変えない安全側の修正を自走候補とする。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -53,18 +53,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   コミット後に実行する。
 - package manager manifest は無く、依存インストールは不要。
 
-### 最新の検証結果（2026-07-12、本ファイル更新時）
+### 最新の検証結果（2026-07-22、本ファイル更新時）
 
-| コマンド | 結果 |
-| --- | --- |
-| `scan-private-markers.ps1` | pass |
-| `tests/scan-private-markers.Tests.ps1` | pass（11/11、PowerShell 5.1 で実測） |
-| `assert-oss-ready.ps1` | pass |
-| `check-whitespace.ps1` | pass（コミット後に実行） |
+- Windows PowerShell 5.1: check:all 4ステップ pass（scanner 回帰テスト 11/11）。
+- Debian GNU/Linux 12 コンテナ / PowerShell 7.5.8 / Git 2.39.5: check:all 4ステップ pass
+  （Microsoft 公式 `mcr.microsoft.com/dotnet/sdk:9.0`、network 無効、repository read-only mount、
+  PowerShell telemetry 無効）。
 
 ## 残懸念・未確認
 
-- 非 Windows（macOS / Linux の `pwsh`）での検証スクリプト実機動作は `未確認`（T-021）。
+- macOS と native Linux host での `pwsh` 実機動作は `未確認`。Linux コンテナ上の動作は
+  T-021 で確認済み。
 - 外部利用者の存在・利用実態（star / fork / 転用事例）は `未確認`。
 - examples はすべて合成データ。実プロジェクトへ転用するときは route / URL / fixture /
   browser evidence を各案件の実測に置き換える。
