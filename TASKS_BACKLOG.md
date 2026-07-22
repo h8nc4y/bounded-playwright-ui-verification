@@ -32,6 +32,7 @@
 | T-022 | R-1: 質問リスト回答後に要件正本（REQUIREMENTS 相当）を整備する | 再定義ドラフト §6 | 高 | M | blocked (D1〜D4 / O1〜O3 回答待ち) |
 | T-023 | 引き継ぎ文書の一本化と check:all 文書の CI 同形化（4ステップ） | 2026-07-12 資料整理 | 中 | M | done |
 | T-024 | scanner に tracked-only 走査モード（`-TrackedOnly`）を追加する | scanner hardening 提案（`914aee1` 時の残提案） | 中 | M | blocked (§14④ 人間承認待ち) |
+| T-025 | Playwright 推奨例の `networkidle` を route/state 固有の bounded readiness 待機へ置き換える | 2026-07-15 外部レビュー | 中 | M | done (PR #22) |
 
 ## 補足メモ
 
@@ -57,4 +58,4 @@
 
 - [ ] scan-private-markers.ps1:30-32 — 検出パターン定義に実private値(private repo slug/ローカル絶対パス)が分割literalで残存(公開repo上で人間には読める)。018方式(.private-markers.local外部ロード)か017方式(汎用regex)へ — オーナー裁定待ち。
 - [ ] 同:106 — 019のみ全working-tree走査(他repoはgit-tracked優先へ移行済み)。git-trackedモード追加。confidence高
-- [ ] SKILL.md:104 — waitUntil networkidleはPlaywright公式がdiscourage(timeout有界で実害小)。loadへの変更+明示待ち推奨。confidence中
+- [x] SKILL.md:104 — waitUntil networkidleはPlaywright公式がdiscourage(timeout有界で実害小)。loadへの変更+明示待ち推奨。confidence中 — T-025 / PR #22

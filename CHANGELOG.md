@@ -28,6 +28,8 @@ All notable changes to this project are recorded here.
 - 非 Windows 寄稿者向けに `pwsh` での validation 実行手順を明確化しました。
 - `main` のブランチ保護と必須チェックの扱いを引き継ぎ文書に明記しました。
 - agent ローカルの `.claude` / `.codex` ディレクトリを validation scan と ignore 対象にしました。
+- `SKILL.md` の Playwright 推奨例を、`networkidle` 依存から `load` と route/state 固有 locator の
+  bounded readiness 待機へ変更しました。
 
 ### Removed
 
