@@ -32,6 +32,7 @@
 | T-022 | R-1: 質問リスト回答後に要件正本（REQUIREMENTS 相当）を整備する | 再定義ドラフト §6 | 高 | M | blocked (D1〜D4 / O1〜O3 回答待ち) |
 | T-023 | 引き継ぎ文書の一本化と check:all 文書の CI 同形化（4ステップ） | 2026-07-12 資料整理 | 中 | M | done |
 | T-024 | scanner に tracked-only 走査モード（`-TrackedOnly`）を追加する | scanner hardening 提案（`914aee1` 時の残提案） | 中 | M | blocked (§14④ 人間承認待ち) |
+| T-025 | Playwright 推奨例の `networkidle` を route/state 固有の bounded readiness 待機へ置き換える | 2026-07-15 外部レビュー | 中 | M | in progress |
 
 ## 補足メモ
 
