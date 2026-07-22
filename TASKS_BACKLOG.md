@@ -28,7 +28,7 @@
 | T-018 | R-2: verdict 4値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化する | 再定義ドラフト §6 | 高 | S | blocked (D2 回答待ち) |
 | T-019 | R-3: MCP ツール経由の検証経路を examples または `SKILL.md` に追記する | 再定義ドラフト §6 | 中 | M | blocked (D4 回答待ち) |
 | T-020 | R-4: sparse claim ledger の合成 example を追加する | 再定義ドラフト §6 | 中 | S | blocked (D3 回答待ち) |
-| T-021 | R-5: 非 Windows `pwsh` 実機検証を記録する（実機が無い間は `未確認` を維持） | 再定義ドラフト §6 | 低 | S | open |
+| T-021 | R-5: 非 Windows `pwsh` 実機検証を記録する（実機が無い間は `未確認` を維持） | 再定義ドラフト §6 | 低 | S | done |
 | T-022 | R-1: 質問リスト回答後に要件正本（REQUIREMENTS 相当）を整備する | 再定義ドラフト §6 | 高 | M | blocked (D1〜D4 / O1〜O3 回答待ち) |
 | T-023 | 引き継ぎ文書の一本化と check:all 文書の CI 同形化（4ステップ） | 2026-07-12 資料整理 | 中 | M | done |
 | T-024 | scanner に tracked-only 走査モード（`-TrackedOnly`）を追加する | scanner hardening 提案（`914aee1` 時の残提案） | 中 | M | blocked (§14④ 人間承認待ち) |
@@ -37,6 +37,10 @@
 
 - **T-018〜T-020 / T-022 のゲート**: `docs/requirements-redefinition-2026-07.md` §5 の
   質問リスト（D1〜D4 / O1〜O3）への人間の回答。回答が出たら blocked を解除して着手する。
+- **T-021 の検証証跡**: 2026-07-22、Debian GNU/Linux 12 コンテナの PowerShell 7.5.8
+  （Git 2.39.5）で check:all 4ステップが pass。Microsoft 公式
+  `mcr.microsoft.com/dotnet/sdk:9.0` を network 無効・repository read-only mount・telemetry
+  無効で実行した。macOS と native Linux host は `未確認` を維持する。
 - **T-024 の提案概要**: `scan-private-markers.ps1` に `param([switch]$TrackedOnly)` を追加し、
   有効時は `git ls-files -z` の結果のみを走査対象にする。CI は checkout 済み tracked のみ
   なので CI で既定有効にすると手元/CI の対象が一致する。走査対象という**振る舞いの変更**
