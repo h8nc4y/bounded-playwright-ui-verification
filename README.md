@@ -136,11 +136,33 @@ AWS, Google, Stripe, and PEM private-key forms), private path markers,
 unexpected GitHub repository links, email-like values, and absolute Windows path
 leaks. It is a best-effort guard and does not guarantee detection of every
 secret format, so keep secrets out of the repository regardless of a passing
-scan. `assert-oss-ready.ps1` checks the skill front matter, required public
+scan. In a Git repository it compares the index snapshot with stable working-tree
+bytes and also scans eligible untracked text files; it does not use the
+owner-gated tracked-only proposal. Git subprocesses run inside bounded,
+network-disabled process boundaries. Normal linked-worktree Gitfiles are
+accepted; symlink/reparse, index-drift, malformed or dangling Git metadata,
+scan-wide deadline, and diagnostic byte-budget failures stop closed. Process
+bootstrap and Git-isolation failures emit only fixed redacted diagnostics.
+The Windows Job boundary retains handle ownership until close succeeds and
+falls back to direct child termination plus a bounded close retry; sub-second
+timeouts keep their millisecond precision. The same operation deadline starts
+before environment preparation and covers launch, containment, target runtime,
+and standard streams; cleanup uses one independent absolute slack. Sanitized
+Git children are rebuilt from a fixed environment allowlist. On POSIX, both
+external and native session launchers publish a ready PID, verify that it is
+the process-group leader, and release the target only after that proof.
+`assert-oss-ready.ps1` checks the skill front matter, required public
 project files, required README sections, broken local Markdown links, mojibake,
-and placeholder markers. `tests/scan-private-markers.Tests.ps1` is a
+placeholder markers, scanner boundary needles, and the exact active CI
+trigger/permission/job/step shape. The existing `actions/checkout@v4` reference
+is a mutable major tag, not an immutable supply-chain guarantee; changing
+workflow files remains an owner-gated operation under `AGENTS.md`.
+`tests/scan-private-markers.Tests.ps1` is a
 dependency-free regression suite covering the scanner's detection, redaction,
-and false-positive guards; run it whenever the scanner changes.
+false-positive guards, binary standard streams, native Git batch bytes, process
+tree cleanup, first-call AST bootstrap/mutation/shadow/transitive bypasses,
+dangling Git metadata, fixed diagnostics, and Windows PowerShell 5.1 encoding;
+run it whenever the scanner changes.
 
 Use your agent runtime's skill validator as an additional check when one is
 available.

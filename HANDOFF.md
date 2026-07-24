@@ -22,19 +22,38 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
 
-## 現状サマリ（2026-07-22 時点）
+## 現状サマリ（2026-07-25 時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 / T-021 / T-023 / T-025 と scanner hardening（`914aee1`）は完了。詳細な完了履歴は
-  `TASKS_BACKLOG.md` の表と `git log` / `CHANGELOG.md` を参照（本ファイルには重複させない）。
+- T-001〜T-017 / T-021 / T-023 / T-025 / T-026 は完了。T-026ではscannerを
+  bounded process、hermetic Git、index＋全working tree（untracked textを含む）、
+  scan-wide deadline、atomic redacted outputのfail-closed境界へ更新した。first-call ASTは
+  target shadow、Alias/Function provider代入、module-qualified bootstrap/provenance、
+  Variable providerの間接参照/custom mutation alias/PSVariable更新、
+  Copy/Move/Rename/dynamic New-Item、class継承、推移的wrapperを拒否する。
+  Windows Jobはsub-second timeoutを
+  millisecond値のまま適用し、close失敗はdirect terminate・有限wait・handle再試行、
+  process/isolationの複合例外も二重出力しない固定診断へ閉じる。正常なlinked-worktree
+  Gitfileも実物fixtureで確認する。T-024のtracked-only modeは採用していない。詳細は
+  `docs/private-marker-scanner-hardening.md`と`TASKS_BACKLOG.md`、変更履歴は
+  `git log` / `CHANGELOG.md`を参照する。
+- bounded launcherはcaller指定値を適用した後にchild環境を固定allowlistへ再構築し、
+  ambientの非Git変数を継承しない。POSIXはexternal/nativeの両経路でwrapper PIDを受け取り、
+  `getpgid(pid) == pid`をkernelへ確認した後だけtargetをreleaseする。operation clockは
+  prep/start/containment前に開始し、全phaseが残budgetを共有する一方、tree stopとstream
+  drainは単一の独立absolute cleanup slackを共有する。各境界はdeadline前target非起動、
+  POSIX target/grandchild開始、cleanup後release sentinelで回帰固定した。
 - **最大のゲート**: `docs/requirements-redefinition-2026-07.md` §5 の質問リスト
   （決定軸 D1〜D4・運営判断 O1〜O3）が人間の回答待ち。回答が出るまで
   T-018〜T-020 / T-022 は blocked。scanner の tracked-only 走査モード（T-024）も
   §14④ ゲートで人間承認待ち。
 - 外部レビューの非 gate 指摘（Playwright 推奨例の `networkidle`）は T-025 / PR #22 で対応。
-  残る scanner 2件はオーナー裁定または §14④ gate の対象。
+  private marker literalの扱いとT-024はオーナー裁定または§14④ gateの対象。
+- OSS readinessは現行CIのtrigger、permissions、job、stepを完全一致で検証する。
+  `actions/checkout@v4`はmutable tagでimmutable保証ではないが、workflow編集は§14①
+  gateのためT-026では変更していない。
 
 ## 次の一手
 
@@ -60,17 +79,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   コミット後に実行する。
 - package manager manifest は無く、依存インストールは不要。
 
-### 最新の検証結果（2026-07-22、本ファイル更新時）
+### 最新の検証結果（2026-07-25、本ファイル更新時）
 
-- Windows PowerShell 5.1: check:all 4ステップ pass（scanner 回帰テスト 11/11）。
-- Debian GNU/Linux 12 コンテナ / PowerShell 7.5.8 / Git 2.39.5: check:all 4ステップ pass
-  （Microsoft 公式 `mcr.microsoft.com/dotnet/sdk:9.0`、network 無効、repository read-only mount、
-  PowerShell telemetry 無効）。
+- Windows PowerShell 5.1.26100.8894 / PowerShell 7.6.2: check:all
+  4ステップ pass。scanner self-testはbinary standard stream、native Git batch byte、
+  Job/process-group cleanup、first-call AST bypass、正常なlinked-worktree Gitfile、
+  固定redacted診断、ancestor/dangling `.git`、index drift、sub-second deadline、
+  output budget、fixed allowlist、launch-inclusive deadlineを含む。不正deadline 3種も
+  exit 2・固定stdout 1行・empty stderrを両runtimeで直接再確認した。
+- Debian GNU/Linux 12 / PowerShell 7.5.8 / Git 2.39.5でも同じ4ステップがpass
+  （Microsoft 公式`mcr.microsoft.com/dotnet/sdk:9.0`、network無効、
+  repository read-only mount、telemetry無効）。POSIX verified-group gate、
+  option-free `setsid <pwsh> ...`、cleanup後release sentinelも含む。
 
 ## 残懸念・未確認
 
-- macOS と native Linux host での `pwsh` 実機動作は `未確認`。Linux コンテナ上の動作は
-  T-021 で確認済み。
+- macOSとnative Linux hostでの`pwsh`実機動作は`未確認`。Debianコンテナ上の動作は
+  T-026で再確認済み。
+- CI checkout actionのimmutable commit SHA固定は`未確認`ではなく**未実施**。
+  現行mutable major tagの変更には§14①の人間承認が必要。
 - 導入先の route/state 固有 readiness locator は本リポジトリでは決定できないため、
   `SKILL.md` の合成例を各 UI に合わせて置き換える必要がある。
 - 外部利用者の存在・利用実態（star / fork / 転用事例）は `未確認`。
