@@ -114,7 +114,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   作業ツリー差分しか見ず、コミット後の clean tree では素通りするため使わない。
   **自己検証は必ずコミット後に CI と同形（このスクリプト）で回す**こと。
 - `tests/scan-private-markers.Tests.ps1` は scanner の検出・redact・偽陽性ガードの回帰
-  テスト（依存ゼロ、Windows PowerShell 5.1 / pwsh 両対応）。scanner を変更したら必ず回す。
+  テスト（依存ゼロ、Windows PowerShell 5.1 / pwsh 両対応）。binary stream、native Git
+  batch、process tree cleanup、ancestor/dangling `.git`、deadlineも対象。scannerを
+  変更したら必ず回す。
 - `scan-private-markers.ps1` は秘匿値プレフィックス・私的パス・許可外の GitHub URL・
   メール様文字列・Windows 絶対パスを遮断する。**allowlist 済みの GitHub URL はこのリポジトリ
   自身の URL のみ**。第三者の `github.com/<owner>/<repo>` リンクを書くと落ちる（必要なら
@@ -124,10 +126,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   `scripts/assert-oss-ready.ps1` の `$placeholderWords`（`"TO"+"DO"` のように分割定義）を
   参照。** この AGENTS.md 自身もそれらの語をそのまま書かないよう避けている。文章では
   代わりに「候補 / 未着手 / 次の一手」を使う。
-- scan と OSS readiness の両スクリプトは**作業ツリー全体**を `Get-ChildItem -Force` で
-  走査する。除外ディレクトリ集合の単一情報源は `scripts/private-scan-config.ps1`
+- scannerはGit index snapshotとstable working-tree bytesのunionに加え、除外外の
+  untracked textも走査する（T-024のtracked-only modeは未採用）。OSS readinessは
+  **作業ツリー全体**を`Get-ChildItem -Force`で走査する。除外ディレクトリ集合の単一情報源は
+  `scripts/private-scan-config.ps1`
   （`.git` `.claude` `.codex` `node_modules` `.ui-verification` `playwright-report`
   `test-results` `coverage` `dist` `build`）。
+- OSS readinessは現行CIのtrigger、permissions、job、stepを完全一致で検証する。ただし
+  `actions/checkout@v4`はmutable tagのままであり、immutable SHA保証ではない。
+  `.github/workflows/**`の変更は§14①なので、固定化には人間承認が必要。
 - **赤スタート時の扱い**: 開始前 check:all が赤なら、その上に積まない。原因を切り分ける —
   (a) `.claude/` 等の**ローカル専用・untracked ファイル**起因のノイズ（`git ls-files` で
   未追跡を確認。除外リストにあるので通常は起きないが、想定外の untracked パスが秘匿値や絶対

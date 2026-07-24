@@ -16,6 +16,18 @@ All notable changes to this project are recorded here.
   （`scripts/private-scan-config.ps1`）、whitespace check の単一エントリ点
   （`scripts/check-whitespace.ps1`）、依存ゼロの回帰テスト
   （`tests/scan-private-markers.Tests.ps1`）を追加し、CI shell を `pwsh` に統一しました。
+- Scanner process境界をWindowsのsuspended child + kill-on-close Job、およびPOSIXの専用
+  process group/sessionへ統合しました。binary standard stream、PS5.1のBOMなしstdin、
+  native Git batch bytes、ancestor/dangling `.git`、index mutation、scan-wide deadline、
+  正常なlinked-worktree Gitfile、atomic UTF-8 finding出力の敵対的fixtureを追加しました。
+  最初のraw fixtureを守るAST gateはtarget shadow、Alias/Function provider代入、
+  module-qualified bootstrapとPSScriptRoot provenance、Set/New-Variable・Variable provider・
+  間接provider/custom mutation alias・PSVariable object更新、Copy/Move/Rename/dynamic
+  New-Item、class継承、推移的wrapperを追跡し、
+  dynamic invocationを拒否します。Windows Job closeは成功時だけhandle ownershipを放棄し、
+  失敗時はdirect terminate・bounded wait・同じhandleの再試行を行い、sub-second timeoutも
+  millisecond値のまま適用します。bootstrap / process / isolation例外は内部pathを含まない
+  固定診断1行とexit code 2へ変換し、cleanupの複合failureでも診断を二重出力しません。
 
 ### Changed
 
@@ -28,6 +40,11 @@ All notable changes to this project are recorded here.
 - 非 Windows 寄稿者向けに `pwsh` での validation 実行手順を明確化しました。
 - `main` のブランチ保護と必須チェックの扱いを引き継ぎ文書に明記しました。
 - agent ローカルの `.claude` / `.codex` ディレクトリを validation scan と ignore 対象にしました。
+- Git repositoryのscanner対象を、index snapshot、stable working-tree bytes、
+  除外外のuntracked textのunionとして明文化しました。T-024のtracked-only modeは
+  引き続き人間承認待ちで、採用していません。
+- OSS readinessで現行CIのtrigger、permissions、job、step所有境界を完全一致検証します。
+  `actions/checkout@v4`のmutable tagは未解決のowner-gated残差で、immutable保証ではありません。
 - `SKILL.md` の Playwright 推奨例を、`networkidle` 依存から `load` と route/state 固有 locator の
   bounded readiness 待機へ変更しました。
 

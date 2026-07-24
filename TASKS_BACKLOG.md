@@ -33,6 +33,7 @@
 | T-023 | 引き継ぎ文書の一本化と check:all 文書の CI 同形化（4ステップ） | 2026-07-12 資料整理 | 中 | M | done |
 | T-024 | scanner に tracked-only 走査モード（`-TrackedOnly`）を追加する | scanner hardening 提案（`914aee1` 時の残提案） | 中 | M | blocked (§14④ 人間承認待ち) |
 | T-025 | Playwright 推奨例の `networkidle` を route/state 固有の bounded readiness 待機へ置き換える | 2026-07-15 外部レビュー | 中 | M | done (PR #22) |
+| T-026 | private marker scannerのprocess・Git・出力境界をfail-closed化する | 2026-07-24 cross-repo maintenance | 高 | L | done |
 
 ## 補足メモ
 
@@ -51,6 +52,16 @@
 - scanner hardening（秘匿値 regex 拡充・self-exempt hole 修正・CI shell の pwsh 統一・
   回帰テスト `tests/scan-private-markers.Tests.ps1` 追加）は `914aee1`（2026-06-21）で
   マージ済み。
+- **T-026 の非変更境界**: T-024のtracked-only化は行わない。Git indexのstaged内容に加え、
+  除外対象外のworking tree textをuntracked fileも含めて走査し、既存のown-repository URL、
+  reserved example email、Bearer prose、directory除外、temp cleanup契約を維持する。
+- **T-026 の追加回帰境界**: first-call ASTはtarget shadow、引数順序を変えたalias、
+  function provider、class constructor/method、function/class間の推移的wrapperを拒否する。
+  Windows Job close失敗ではhandleを保持してdirect terminate・有限wait・再closeし、
+  bootstrap/process/isolationの複合例外も内部pathを出さない固定診断1行とexit code 2へ閉じる。
+- **T-026 の残差**: `.github/workflows/ci.yml`は§14①の人間gateにつき変更していない。
+  readinessは現行trigger / permissions / job / stepを完全一致で固定するが、
+  `actions/checkout@v4`はmutable tagのままでありimmutable保証ではない。
 
 ## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
 
