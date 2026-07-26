@@ -27,7 +27,7 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 / T-021 / T-023 / T-025〜T-027 は完了。T-026ではscannerを
+- T-001〜T-017 / T-021 / T-023 / T-025〜T-028 は完了。T-026ではscannerを
   bounded process、hermetic Git、index＋全working tree（untracked textを含む）、
   scan-wide deadline、atomic redacted outputのfail-closed境界へ更新した。first-call ASTは
   target shadow、Alias/Function provider代入、module-qualified bootstrap/provenance、
@@ -77,15 +77,18 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
   clearanceなし。v2は再帰的な未宣言file、comment / fence / 別section decoy、
   state prefix違いを含む14 mutationとrole付きmanifestへ修正したが、独立reviewで
   P2=3 / P3=0、clearanceなし。v3は表セルのnegative verdictも共通語彙で拒否し、
-  ordered-list / 英語`unverified`を含む17 mutationへ拡張して再検証中。
-  commit / PR / mergeは未実施。
+  ordered-list / 英語`unverified`を含む17 mutationへ拡張したが、inline-codeを保つ
+  表セルの偽合格とcurrent docsの14件表記を独立reviewでP2=2として確認した。v4は
+  inline-codeの可視本文を正規化し、3文書を17件へ同期。最終独立reviewは
+  P0 / P1 / P2 / P3=0。PR #26を`a749422`へsquash mergeし、PR CIとmerge後main CIもpass。
 
 ## 次の一手
 
 1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
    private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
-2. **Codex（回答待ちに自走可）**: T-028 v3の両runtime exact gateと独立reviewを行い、
-   clearance後にfocused commit → PR → CI → mergeへ進む。
+2. **Codex（回答待ちに自走可）**: 新たな具体的coverage gap、失敗、または安全な
+   maintenance候補が確認できた場合だけ次のtaskとして台帳化する。現時点で未完了の
+   既知taskはすべて上記の人間gate対象。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -147,7 +150,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   英語`unverified`を独立mutationで拒否した。この証跡同期を含むexact staged treeを
   integration freezeとして、両runtime full gate / security / UTF-8 / diff /
   独立reviewのclearanceを必須とする。wall-clock秒数はmachine loadで変動する外部実測で
-  あり、このhandoffのsame-freeze contractには含めない。
+  あり、このhandoffのsame-freeze contractには含めない。独立reviewでinline-codeを保つ
+  表セルのnegative verdictとcurrent docsのmutation件数driftをP2=2として確認した。
+- T-028 v4のexact staged treeは両runtimeでcheck:all 4/4をpass。外部実測の参考値は
+  PowerShell 7.6.2が246.6秒、Windows PowerShell 5.1.26100.8894が203.9秒。
+  OSS readinessは11 example / 7 report schema / 17 hostile mutation、
+  server-runbook contractは93 hostile fixtureを両runtimeでpassした。Gitleaks whole tree、
+  local Semgrep rules、対象7ファイルのstrict UTF-8 / BOM、staged global hook、
+  `git diff --cached --check`をpass。独立reviewはP0 / P1 / P2 / P3=0。
+  PR #26 CIと`a749422` merge後main CI（run `30224634711`）も全step pass。
 
 ## 残懸念・未確認
 
