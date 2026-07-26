@@ -35,7 +35,7 @@
 | T-025 | Playwright 推奨例の `networkidle` を route/state 固有の bounded readiness 待機へ置き換える | 2026-07-15 外部レビュー | 中 | M | done (PR #22) |
 | T-026 | private marker scannerのprocess・Git・出力境界をfail-closed化する | 2026-07-24 cross-repo maintenance | 高 | L | done |
 | T-027 | bounded server runbook の cleanup を直接process所有・例外安全・fail-closed にする | `AGENTS.md` §10 と独立レビュー | 高 | L | done (PR #24) |
-| T-028 | loading / empty / error state の合成report例と全公開exampleのreadiness契約を追加する | `SKILL.md` の状態確認要件と公開example検証のcoverage gap | 中 | M | review |
+| T-028 | loading / empty / error state の合成report例と全公開exampleのreadiness契約を追加する | `SKILL.md` の状態確認要件と公開example検証のcoverage gap | 中 | M | done (PR #26) |
 
 ## 補足メモ
 
