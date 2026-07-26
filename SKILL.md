@@ -141,6 +141,24 @@ Use screenshots as evidence for visual fit. Numeric checks help catch issues, bu
 they do not overrule visible clipping, overlap, unreadable text, or broken
 layout.
 
+## Synthetic Examples
+
+Use the published examples as reporting references. Every scenario is
+synthetic; do not substitute real credentials, auth cookies, customer data,
+production responses, or private logs.
+
+- [UI verification checklist](examples/ui-verification-checklist.md)
+- [Final report template](examples/final-report-template.md)
+- [Bounded server runbook](examples/server-runbook.md)
+- [Bounded server executable template](examples/server-runbook.ps1)
+- [Evidence matrix example](examples/evidence-matrix.md)
+- [Failed verification report example](examples/failed-verification-report.md)
+- [Protected route blocked verification report](examples/protected-route-report.md)
+- [Responsive overflow verification report](examples/responsive-overflow-report.md)
+- [Blank render target verification report](examples/blank-render-target-report.md)
+- [Hover and focus state verification report](examples/hover-focus-state-report.md)
+- [Loading, empty, and error state verification report](examples/loading-empty-error-state-report.md)
+
 ## Report Format
 
 Include these items in the final report when applicable:

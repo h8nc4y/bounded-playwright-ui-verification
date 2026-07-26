@@ -110,6 +110,7 @@ relevant. Use it to plan and report:
 - [Responsive overflow verification report](examples/responsive-overflow-report.md)
 - [Blank render target verification report](examples/blank-render-target-report.md)
 - [Hover and focus state verification report](examples/hover-focus-state-report.md)
+- [Loading, empty, and error state verification report](examples/loading-empty-error-state-report.md)
 
 All examples are synthetic. They do not include private logs, screenshots,
 tokens, auth cookies, or customer data.
@@ -158,8 +159,13 @@ placeholder markers, scanner boundary needles, and the exact active CI
 trigger/permission/job/step shape. The existing `actions/checkout@v4` reference
 is a mutable major tag, not an immutable supply-chain guarantee; changing
 workflow files remains an owner-gated operation under `AGENTS.md`. The readiness
-check also runs the server-runbook contract self-test against the complete
-PowerShell workflow and a synthetic local HTTP server. The executable template is
+check also keeps every public example file, display name, README link, SKILL
+link, and report evidence-category set in one exact manifest. It rejects a
+missing link, missing state row, example-name drift, nested undeclared file,
+comment/fence/section decoy, and contradictory state verdict through seventeen in-memory
+hostile mutations. It also runs the server-runbook contract self-test against the
+complete PowerShell workflow and a synthetic local HTTP server. The executable
+template is
 strict UTF-8 without BOM and LF-only. A CommonMark-aware scanner permits one exact
 PowerShell fence, and its body must match the template with ordinal comparison;
 only four generated read-only `ContainsKey` variants are accepted. It rejects 93 hostile

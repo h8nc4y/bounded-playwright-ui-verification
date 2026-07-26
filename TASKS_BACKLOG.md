@@ -35,6 +35,7 @@
 | T-025 | Playwright 推奨例の `networkidle` を route/state 固有の bounded readiness 待機へ置き換える | 2026-07-15 外部レビュー | 中 | M | done (PR #22) |
 | T-026 | private marker scannerのprocess・Git・出力境界をfail-closed化する | 2026-07-24 cross-repo maintenance | 高 | L | done |
 | T-027 | bounded server runbook の cleanup を直接process所有・例外安全・fail-closed にする | `AGENTS.md` §10 と独立レビュー | 高 | L | done (PR #24) |
+| T-028 | loading / empty / error state の合成report例と全公開exampleのreadiness契約を追加する | `SKILL.md` の状態確認要件と公開example検証のcoverage gap | 中 | M | review |
 
 ## 補足メモ
 
@@ -91,6 +92,20 @@
     partial-start cleanup、自然終了race、3段階cleanup failure集約、hostile root canaryを
     Windows PowerShell 5.1 / PowerShell 7で実行し、check:all 4ステップも両runtimeで通す。
   - **設計正本**: `docs/server-runbook-cleanup-contract.md`。
+- **T-028 の実装契約（2026-07-27）**:
+  - **目的**: `SKILL.md` が確認を求める loading / empty / error state を、実データや認証情報を
+    使わない1つの合成report例で具体化する。同時に、README / SKILL が公開する全exampleを
+    readinessで同じmanifestへ閉じ、例の追加後に片方のリンクや必要な証跡カテゴリだけが
+    driftする状態をfail closedにする。
+  - **影響**: 公開example、README / SKILL のexample索引、OSS readiness検証だけを変更する。
+    verdict、applicability、対象範囲など回答待ちの製品要件は変更しない。
+  - **検証**: 全公開exampleのfile名・表示名・README / SKILLリンクを完全一致で照合し、
+    report例ごとの証跡カテゴリ集合を閉じて検証する。状態行欠落、リンク欠落、再帰的な
+    未宣言file、file名drift、comment / fence decoy、完了済みstateへ`未確認` / blocked /
+    failed / errorを追記する矛盾の17 mutationを拒否する。PowerShell 7 /
+    Windows PowerShell 5.1のcheck:all、private marker scan、UTF-8、whitespaceを実測する。
+  - **安全境界**: exampleとmutationは合成値のみを使う。実ブラウザ、実UI、deploy、OAuth、
+    secret、実データ、有料サービスは利用せず、実施していないものは`未確認`とする。
 
 ## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
 
