@@ -103,6 +103,7 @@ relevant. Use it to plan and report:
 - [UI verification checklist](examples/ui-verification-checklist.md)
 - [Final report template](examples/final-report-template.md)
 - [Bounded server runbook](examples/server-runbook.md)
+- [Bounded server executable template](examples/server-runbook.ps1)
 - [Evidence matrix example](examples/evidence-matrix.md)
 - [Failed verification report example](examples/failed-verification-report.md)
 - [Protected route blocked verification report](examples/protected-route-report.md)
@@ -156,7 +157,29 @@ project files, required README sections, broken local Markdown links, mojibake,
 placeholder markers, scanner boundary needles, and the exact active CI
 trigger/permission/job/step shape. The existing `actions/checkout@v4` reference
 is a mutable major tag, not an immutable supply-chain guarantee; changing
-workflow files remains an owner-gated operation under `AGENTS.md`.
+workflow files remains an owner-gated operation under `AGENTS.md`. The readiness
+check also runs the server-runbook contract self-test against the complete
+PowerShell workflow and a synthetic local HTTP server. The executable template is
+strict UTF-8 without BOM and LF-only. A CommonMark-aware scanner permits one exact
+PowerShell fence, and its body must match the template with ordinal comparison;
+only four generated read-only `ContainsKey` variants are accepted. It rejects 93 hostile
+fixtures that cut the server-entry def-use chain, overwrite the launch splat,
+mutate the retained process identity through aliases/dynamic storage, move cleanup
+outside `finally`, substitute a task runner, replay raw stderr through direct or
+dynamic readers, reflect an absolute path through output/throw sinks, discard the
+bounded stop/race handling, remove deterministic disposal, shadow a command,
+mutate the poll counter or a critical output target, add a differently formed
+CommonMark executable block, drift ordinal canonical bytes, or weaken ordered
+failure propagation. Root `param`, `using`, script requirements, named blocks,
+and every `trap` are rejected before statement analysis. Variable, command, and member identifiers use
+`OrdinalIgnoreCase` after provider/scope normalization. Top-level, verification,
+health, polling, cleanup, and all assignment/unary writes use closed executable
+sequences. Except for the U+00AD byte-boundary-only fixture, every hostile mutation
+must also be rejected when the semantic analyzer is exercised independently of
+the byte gate.
+The integration also verifies partial-start cleanup without a retained handle, the
+PS5.1 natural-exit race, ordered aggregation when stop and both wrapper disposals
+all fail, and fixed relative diagnostic metadata without exposing the local root.
 `tests/scan-private-markers.Tests.ps1` is a
 dependency-free regression suite covering the scanner's detection, redaction,
 false-positive guards, binary standard streams, native Git batch bytes, process

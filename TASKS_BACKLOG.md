@@ -34,6 +34,7 @@
 | T-024 | scanner に tracked-only 走査モード（`-TrackedOnly`）を追加する | scanner hardening 提案（`914aee1` 時の残提案） | 中 | M | blocked (§14④ 人間承認待ち) |
 | T-025 | Playwright 推奨例の `networkidle` を route/state 固有の bounded readiness 待機へ置き換える | 2026-07-15 外部レビュー | 中 | M | done (PR #22) |
 | T-026 | private marker scannerのprocess・Git・出力境界をfail-closed化する | 2026-07-24 cross-repo maintenance | 高 | L | done |
+| T-027 | bounded server runbook の cleanup を直接process所有・例外安全・fail-closed にする | `AGENTS.md` §10 と独立レビュー | 高 | L | in progress (review-fix v7) |
 
 ## 補足メモ
 
@@ -62,6 +63,34 @@
 - **T-026 の残差**: `.github/workflows/ci.yml`は§14①の人間gateにつき変更していない。
   readinessは現行trigger / permissions / job / stepを完全一致で固定するが、
   `actions/checkout@v4`はmutable tagのままでありimmutable保証ではない。
+- **T-027 の実装契約（2026-07-26）**:
+  - **目的**: browser verification が成功・失敗・timeoutのどの経路を通っても
+    `finally` でcleanupを実行する。task runnerや`.cmd`を介さず実server executableを
+    直接起動し、起動直後に取得した同一process handleを保持して停止を有限時間で確認する。
+  - **影響**: 合成/local用途のPowerShell runbookと、その契約を守るreadiness回帰だけを
+    厳格化する。実server、production、OAuth、secret、実データ、課金操作は扱わない。
+  - **安全境界**: health timeoutではraw stderrを自動再生せず、固定相対log ID・byte size・
+    固定classificationだけを出し、absolute rootをpublic warningへ反射しない。
+    `HasExited=false`直後の自然終了raceは同じ保持processだけを再確認する。直接serverが
+    子孫processを生成する案件は、この例だけでtree cleanupを主張せず、OS固有containmentへ
+    置換するまで`未確認`とする。
+    handle取得がStart後に失敗した場合も同じdirect `Process`へbounded cleanupを行い、
+    `SafeHandle`と`Process`はnested `finally`で決定的に解放する。stop / SafeHandle
+    Dispose / Process Disposeの失敗はstage順で保持し、複数時だけ集約する。
+  - **検証**: コメント・文字列・here-string・dead branchを証拠に数えない実行可能ASTと
+    def-use / 後続mutation / 支配関係で、`finally`、同一handle、bounded stop、
+    race recovery、diagnostic、両failure伝播、alias/dynamic storage、
+    provider/scope/case正規化、command/output/throw/invocation sinkを検査する。
+    CommonMark fence全体を1 executable blockへ閉じ、executable正本とMarkdown bodyの
+    strict UTF-8 / LF / Ordinal一致を固定する。top-level / outer try / health / polling /
+    cleanupと全assignment・unary writeをclosed sequence化し、function/typeによる
+    command shadowとcritical variableの後続provider writeを拒否する。root ScriptBlockは
+    unnamed endだけを許可し、`param` / `using` / requirements / named block / `trap`を
+    拒否する。93種の
+    敵対的fixture、4種のexact read-only probe、synthetic local HTTP server、
+    partial-start cleanup、自然終了race、3段階cleanup failure集約、hostile root canaryを
+    Windows PowerShell 5.1 / PowerShell 7で実行し、check:all 4ステップも両runtimeで通す。
+  - **設計正本**: `docs/server-runbook-cleanup-contract.md`。
 
 ## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
 

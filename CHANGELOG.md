@@ -47,6 +47,25 @@ All notable changes to this project are recorded here.
   `actions/checkout@v4`のmutable tagは未解決のowner-gated残差で、immutable保証ではありません。
 - `SKILL.md` の Playwright 推奨例を、`networkidle` 依存から `load` と route/state 固有 locator の
   bounded readiness 待機へ変更しました。
+- 合成server runbookを単一の`try`/`finally` workflowへ更新し、実server executableの
+  直接起動、起動時`SafeHandle`の保持、5秒上限の停止確認、
+  verification/cleanup両failureの伝播を追加しました。health timeoutはraw stderrを再生せず、
+  固定classification・相対log ID・byte sizeだけを出します。readinessでは実行可能ASTの
+  親子・順序・支配関係に加えてserver-entry def-use、後続mutation不在、型付きfailure
+  listの追加順、大小文字・scope qualifierを正規化したstorage provenance、
+  command/output/throw/invocation sinkを固定します。handle取得に失敗したpartial-startでも
+  同じdirect `Process`を停止し、nested `finally`で`SafeHandle`と`Process`を解放します。
+  実行可能正本`examples/server-runbook.ps1`をUTF-8 BOMなし・LF-onlyで追加し、
+  CommonMarkとして認識される全fenceを1 blockへ閉じ、Markdown内PowerShell bodyとの
+  Ordinal完全一致を固定しました。`variable:` providerを含むstorage正規化後のidentifierは
+  `OrdinalIgnoreCase`で比較します。top-level / verification / health / polling / cleanupと
+  全assignment・unary writeをclosed sequence化し、command shadow、root / URL / PID evidence /
+  readiness bound / diagnostic provenanceを検査します。root ScriptBlockはunnamed endだけへ
+  閉じ、`param` / `using` / script requirements / named block / `trap`を拒否します。
+  stop・SafeHandle Dispose・Process Disposeの各例外はstage順で保持します。
+  93種の敵対的fixture、4種のexact read-only probe、synthetic local HTTP server、
+  partial-start cleanup、PS5.1自然終了race、3段階cleanup failure集約、
+  hostile root非反射をWindows PowerShell 5.1 / PowerShell 7で検査します。
 
 ### Removed
 

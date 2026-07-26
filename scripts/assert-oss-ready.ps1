@@ -226,14 +226,18 @@ $requiredFiles = @(
   ".github/pull_request_template.md",
   "docs/release-checklist.md",
   "docs/private-marker-scanner-hardening.md",
+  "docs/server-runbook-cleanup-contract.md",
   "examples/final-report-template.md",
   "examples/server-runbook.md",
+  "examples/server-runbook.ps1",
   "examples/ui-verification-checklist.md",
   "scripts/assert-oss-ready.ps1",
   "scripts/check-whitespace.ps1",
   "scripts/private-marker-process.ps1",
   "scripts/private-scan-config.ps1",
   "scripts/scan-private-markers.ps1",
+  "tests/fixtures/synthetic-http-server.js",
+  "tests/server-runbook-contract.Tests.ps1",
   "tests/scan-private-markers.Tests.ps1"
 )
 
@@ -249,9 +253,126 @@ foreach ($scriptPath in @(
   "scripts/private-marker-process.ps1",
   "scripts/private-scan-config.ps1",
   "scripts/scan-private-markers.ps1",
+  "tests/server-runbook-contract.Tests.ps1",
   "tests/scan-private-markers.Tests.ps1"
 )) {
   Assert-FileHasUtf8Bom -RelativePath $scriptPath
+}
+
+try {
+  & (Get-RepoPath "tests/server-runbook-contract.Tests.ps1") -Root $repoRoot.Path
+} catch {
+  Add-Error "Server runbook cleanup contract regression failed."
+}
+
+Assert-FileContains `
+  -RelativePath "tests/server-runbook-contract.Tests.ps1" `
+  -Pattern '(?m)^\$expectedHostileFixtureCount = 93$' `
+  -Description "exact hostile server-runbook fixture count"
+Assert-FileContains `
+  -RelativePath "tests/server-runbook-contract.Tests.ps1" `
+  -Pattern '(?m)^  \$expectedReadOnlyProbeCount = 4$' `
+  -Description "exact read-only server-runbook probe count"
+
+foreach ($fixtureName in @(
+  "root-param-block",
+  "root-using-module",
+  "root-trap",
+  "root-script-requirements",
+  "root-named-end-wrapper",
+  "root-begin-end-wrapper",
+  "root-process-end-wrapper",
+  "root-dynamicparam-end-wrapper",
+  "root-clean-end-wrapper",
+  "health-loop-attempt-decrement-after-sleep",
+  "start-process-function-shadow",
+  "url-definition-changed",
+  "pid-file-mutated-in-nested-branch",
+  "extra-tilde-powershell-block",
+  "extra-four-backtick-powershell-block",
+  "extra-mixed-case-powershell-block",
+  "canonical-soft-hyphen-byte-drift",
+  "extra-powershell-block",
+  "canonical-code-prefix",
+  "canonical-code-suffix",
+  "cleanup-stage-aggregate-message-changed",
+  "cleanup-outside-finally",
+  "task-runner-filepath",
+  "server-entry-def-use-cut",
+  "server-script-def-use-cut",
+  "server-reassigned-after-handle",
+  "server-reassigned-with-mixed-case",
+  "server-reassigned-with-local-scope",
+  "server-reassigned-through-variable-provider",
+  "server-property-mutated-after-handle",
+  "start-filepath-overwritten",
+  "start-filepath-overwritten-with-local-scope",
+  "start-filepath-overwritten-through-variable-provider",
+  "server-arguments-mutated-by-method",
+  "start-filepath-overwritten-through-alias",
+  "server-entry-mutated-through-psvariable",
+  "dual-list-initializer-removed",
+  "raw-stderr-replay",
+  "initial-handle-guard-and-instead-of-or",
+  "initial-handle-null-check-removed",
+  "cleanup-handle-guard-and-instead-of-or",
+  "partial-start-cleanup-replaced-by-throw",
+  "safe-handle-dispose-removed",
+  "process-dispose-removed",
+  "stderr-size-provenance-cut",
+  "bare-get-item-output",
+  "bare-resolve-path-output",
+  "bare-new-item-output",
+  "bare-join-path-output",
+  "bare-health-response-output",
+  "bare-pid-json-output",
+  "bare-health-test-path-output",
+  "verification-placeholder-replaced-by-noop",
+  "readiness-forced-true",
+  "health-loop-made-effectively-unbounded",
+  "health-sleep-made-effectively-unbounded",
+  "diagnostic-mutated-through-variable-provider",
+  "diagnostic-mutated-in-nested-branch",
+  "diagnostic-mutated-through-alias",
+  "root-reassigned-before-launch",
+  "root-overwritten-by-get-command-outvariable",
+  "pid-evidence-source-replaced-by-root",
+  "server-start-time-mutated-in-nested-branch",
+  "dead-handle-capture",
+  "here-string-handle-decoy",
+  "handle-mutated-through-get-variable",
+  "server-mutated-through-dynamic-set-variable",
+  "server-disposed-through-alias",
+  "server-mutated-through-psobject",
+  "extra-warning-reflects-stderr",
+  "bare-stderr-output",
+  "return-stderr-output",
+  "pid-reresolve-cleanup",
+  "dead-kill",
+  "kill-race-recheck-removed",
+  "unbounded-stop-confirmation",
+  "stop-timeout-swallowed",
+  "timeout-message-reflects-stderr",
+  "diagnostic-classification-removed",
+  "absolute-log-path-reflected",
+  "absolute-cleanup-report-reflected",
+  "dynamic-reader-replays-stderr",
+  "static-reader-replays-stderr",
+  "dead-verification-catch",
+  "here-string-verification-catch",
+  "dead-cleanup-catch",
+  "dead-dual-failure-add",
+  "here-string-rethrow",
+  "dual-failure-loses-cleanup",
+  "dual-add-order-swapped",
+  "dual-failure-collapsed",
+  "dual-aggregate-not-final",
+  "surface-token-decoy"
+)) {
+  Assert-FileContains `
+    -RelativePath "tests/server-runbook-contract.Tests.ps1" `
+    -Pattern ([regex]::Escape($fixtureName)) `
+    -Description "server-runbook hostile fixture: $fixtureName"
 }
 
 if (Test-Path -LiteralPath (Get-RepoPath "SKILL.md") -PathType Leaf) {

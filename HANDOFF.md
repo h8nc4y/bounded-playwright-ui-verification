@@ -22,7 +22,7 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
 
-## 現状サマリ（2026-07-25 時点）
+## 現状サマリ（2026-07-26 時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
@@ -54,13 +54,30 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
 - OSS readinessは現行CIのtrigger、permissions、job、stepを完全一致で検証する。
   `actions/checkout@v4`はmutable tagでimmutable保証ではないが、workflow編集は§14①
   gateのためT-026では変更していない。
+- T-027は初回レビューP1=2 / P2=3 / P3=0、v1再レビューP1=0 / P2=3 / P3=1、
+  v2再レビューP1=2 / P2=0 / P3=1、v3再レビューP1=3 / P2=1 / P3=1を受け、
+  v4再レビューP1=4 / P2=2 / P3=0、v5再レビューP1=4 / P2=1 / P3=0を受け、
+  7回目のreview-fixを実装中。
+  server-entry def-useと起動時`SafeHandle`保持に加え、alias/dynamic storage provenance、
+  provider/scope/case正規化、exact SafeHandle OR guard、全command/invocation/output/throw sink、
+  partial-start cleanup、両wrapper Dispose、PS5.1自然終了race、固定相対log ID、
+  型付きdual-failure listをcontractへ追加した。v5ではexecutable正本とMarkdown blockの
+  byte一致、bounded readiness、root / PID evidence / diagnosticの不変性、
+  3段階cleanup failureの順序付き集約を追加した。read-only `ContainsKey`は
+  正本から生成する4種だけ許可する。v6ではCommonMark全fence、Ordinal byte比較、
+  identifierのOrdinalIgnoreCase、top-level /各block /全writeのclosed sequence、
+  function/type shadow拒否、critical def-use固定を追加した。v7ではroot ScriptBlockを
+  unnamed endだけへ閉じ、`param` / `using` / requirements / named block / `trap`を拒否する。
+  設計正本は`docs/server-runbook-cleanup-contract.md`。
 
 ## 次の一手
 
 1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
    private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
-2. **Codex（回答待ちに自走可）**: 既存スコープ内の合成 example を拡充する。着手時に
-   具体的なシナリオを `TASKS_BACKLOG.md` へ追加し、製品要件の意味は変えない。
+2. **Codex（進行中）**: T-027のexact freezeを同じ独立reviewerへ再提示し、
+   P1 / P2 / P3を0にしてからGit/GitHub統合へ進む。
+3. **Codex（T-027後も回答待ちに自走可）**: 既存スコープ内の合成 example を拡充する。
+   着手時に具体的なシナリオを `TASKS_BACKLOG.md` へ追加する。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -79,7 +96,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   コミット後に実行する。
 - package manager manifest は無く、依存インストールは不要。
 
-### 最新の検証結果（2026-07-25、本ファイル更新時）
+### 最新の検証結果（2026-07-27、本ファイル更新時）
 
 - Windows PowerShell 5.1.26100.8894 / PowerShell 7.6.2: check:all
   4ステップ pass。scanner self-testはbinary standard stream、native Git batch byte、
@@ -91,6 +108,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   （Microsoft 公式`mcr.microsoft.com/dotnet/sdk:9.0`、network無効、
   repository read-only mount、telemetry無効）。POSIX verified-group gate、
   option-free `setsid <pwsh> ...`、cleanup後release sentinelも含む。
+- T-027 v4 freezeは両runtimeでcheck:all 4/4 pass後、独立v4レビューで
+  P1=4 / P2=2 / P3=0。v5は両runtimeでcheck:all 4/4 pass後、独立v5レビューで
+  P1=4 / P2=1 / P3=0。v6は両runtimeでcheck:all 4/4 pass後、独立v6レビューで
+  P1=1 / P2=0 / P3=0。v7 focused testは両runtimeで93種の敵対的fixture reject、
+  4種のexact read-only probe、synthetic Node HTTP server、partial-start cleanup、
+  自然終了race、3段階cleanup failure集約、hostile root非反射がpass。
+  v7は両runtimeでcheck:all 4/4 pass。Semgrep / Gitleaksと対象10ファイルの
+  UTF-8・改行・BOM契約もpass。独立再レビュー、Git/GitHub統合は未確認。
 
 ## 残懸念・未確認
 
