@@ -1,21 +1,3 @@
-# Bounded Server Runbook
-
-This is a synthetic Vite pattern for local UI verification. Adapt the direct server
-executable, server entry, port, health endpoint, and `$verifyUi` block to the project.
-Do not substitute `npm`, a shell script, or another task runner: the process returned
-by `Start-Process` must be the actual server process. The placeholder verification
-fails closed until it is replaced, so copying the example cannot create a false
-browser-verification claim.
-
-The executable source of truth is
-[`server-runbook.ps1`](server-runbook.ps1). The PowerShell block below must remain
-ordinal-identical to that UTF-8 (no BOM), LF-only template. This document permits
-exactly one CommonMark fenced code block so documentation, alternate fence forms,
-and the audited executable cannot drift independently.
-
-## Complete Bounded Workflow
-
-```powershell
 $runtimeIsWindows = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
 $root = (Resolve-Path ".").Path
 $stateDir = Join-Path $root ".ui-verification"
@@ -208,33 +190,3 @@ if ($null -ne $cleanupFailure) {
 }
 
 Write-Host $cleanupResult
-```
-
-The `finally` block runs after successful verification, a verification failure, or a
-health-check timeout. The direct server's `SafeHandle` is acquired immediately after
-start and retained through cleanup; the PID is never re-resolved. If handle
-acquisition fails after `Start-Process` returns, bounded cleanup still acts on that
-same directly returned `Process` object. A kill request is not treated as proof of
-cleanup: the example also waits up to 5 seconds for the same owned process to exit.
-If that process exits naturally between the first
-`HasExited` check and `Kill`, the catch rechecks only the same retained object and
-accepts the already-completed cleanup. Nested `finally` blocks then dispose both the
-retained `SafeHandle` and `Process` wrappers. Stop, handle-disposal, and
-process-disposal failures are retained in stage order and combined when more than
-one occurs. A verification failure and a cleanup failure are preserved together
-instead of one hiding the other.
-
-The health-timeout path does not replay stderr. It emits only classified metadata:
-the fixed relative log ID `dev-server.err.log`, byte size, attempt count, and a fixed
-failure class. It never reflects the absolute root or stderr path. Inspect raw logs
-locally and only when needed; do not paste them into public reports.
-
-This pattern directly owns the Vite server process, not an `npm` wrapper. If the
-actual server or a plugin creates descendants, use a project-specific process-tree
-containment mechanism and report descendant cleanup as `未確認` until it is actually
-checked. Do not infer tree cleanup from the direct server exit alone.
-
-Report only relative artifact IDs, classified log metadata, the bounded health-check
-result, browser tool, viewport sizes, findings, and `$cleanupResult`; never publish
-the absolute state/root path. If the script throws, report the verification and/or
-cleanup failure instead of assuming the server stopped.
