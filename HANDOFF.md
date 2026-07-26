@@ -22,12 +22,12 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
 
-## 現状サマリ（2026-07-26 時点）
+## 現状サマリ（2026-07-27 時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 / T-021 / T-023 / T-025 / T-026 は完了。T-026ではscannerを
+- T-001〜T-017 / T-021 / T-023 / T-025〜T-027 は完了。T-026ではscannerを
   bounded process、hermetic Git、index＋全working tree（untracked textを含む）、
   scan-wide deadline、atomic redacted outputのfail-closed境界へ更新した。first-call ASTは
   target shadow、Alias/Function provider代入、module-qualified bootstrap/provenance、
@@ -57,7 +57,7 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
 - T-027は初回レビューP1=2 / P2=3 / P3=0、v1再レビューP1=0 / P2=3 / P3=1、
   v2再レビューP1=2 / P2=0 / P3=1、v3再レビューP1=3 / P2=1 / P3=1を受け、
   v4再レビューP1=4 / P2=2 / P3=0、v5再レビューP1=4 / P2=1 / P3=0を受け、
-  7回目のreview-fixを実装中。
+  v6再レビューP1=1 / P2=0 / P3=0、v7最終レビューP0 / P1 / P2 / P3=0で完了した。
   server-entry def-useと起動時`SafeHandle`保持に加え、alias/dynamic storage provenance、
   provider/scope/case正規化、exact SafeHandle OR guard、全command/invocation/output/throw sink、
   partial-start cleanup、両wrapper Dispose、PS5.1自然終了race、固定相対log ID、
@@ -68,15 +68,14 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
   identifierのOrdinalIgnoreCase、top-level /各block /全writeのclosed sequence、
   function/type shadow拒否、critical def-use固定を追加した。v7ではroot ScriptBlockを
   unnamed endだけへ閉じ、`param` / `using` / requirements / named block / `trap`を拒否する。
-  設計正本は`docs/server-runbook-cleanup-contract.md`。
+  PR #24を`10e7cd0`へsquash merge済み。設計正本は
+  `docs/server-runbook-cleanup-contract.md`。
 
 ## 次の一手
 
 1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
    private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
-2. **Codex（進行中）**: T-027のexact freezeを同じ独立reviewerへ再提示し、
-   P1 / P2 / P3を0にしてからGit/GitHub統合へ進む。
-3. **Codex（T-027後も回答待ちに自走可）**: 既存スコープ内の合成 example を拡充する。
+2. **Codex（回答待ちに自走可）**: 既存スコープ内の合成 example を拡充する。
    着手時に具体的なシナリオを `TASKS_BACKLOG.md` へ追加する。
 
 ## 検証コマンド（check:all、CI と同形）
@@ -115,7 +114,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   4種のexact read-only probe、synthetic Node HTTP server、partial-start cleanup、
   自然終了race、3段階cleanup failure集約、hostile root非反射がpass。
   v7は両runtimeでcheck:all 4/4 pass。Semgrep / Gitleaksと対象10ファイルの
-  UTF-8・改行・BOM契約もpass。独立再レビュー、Git/GitHub統合は未確認。
+  UTF-8・改行・BOM契約もpass。独立v7レビューはP0 / P1 / P2 / P3=0。
+  PR #24のCIと`10e7cd0` merge後main CIもpass。
 
 ## 残懸念・未確認
 
