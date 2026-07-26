@@ -70,13 +70,22 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
   unnamed endだけへ閉じ、`param` / `using` / requirements / named block / `trap`を拒否する。
   PR #24を`10e7cd0`へsquash merge済み。設計正本は
   `docs/server-runbook-cleanup-contract.md`。
+- T-028はloading / empty / error stateを別々の合成fixtureで確認するreport例を追加し、
+  全11公開exampleのfile名・表示名・README / SKILLリンクと、7 reportの証跡カテゴリ集合を
+  readinessの単一manifestへ閉じた。リンク欠落、state行欠落、file名drift、正常表の後ろへ
+  相反する`未確認`を足すappendを4 mutationで拒否したv1は、独立reviewでP2=4 / P3=2、
+  clearanceなし。v2は再帰的な未宣言file、comment / fence / 別section decoy、
+  state prefix違いを含む14 mutationとrole付きmanifestへ修正したが、独立reviewで
+  P2=3 / P3=0、clearanceなし。v3は表セルのnegative verdictも共通語彙で拒否し、
+  ordered-list / 英語`unverified`を含む17 mutationへ拡張して再検証中。
+  commit / PR / mergeは未実施。
 
 ## 次の一手
 
 1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
    private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
-2. **Codex（回答待ちに自走可）**: 既存スコープ内の合成 example を拡充する。
-   着手時に具体的なシナリオを `TASKS_BACKLOG.md` へ追加する。
+2. **Codex（回答待ちに自走可）**: T-028 v3の両runtime exact gateと独立reviewを行い、
+   clearance後にfocused commit → PR → CI → mergeへ進む。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -116,6 +125,29 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   v7は両runtimeでcheck:all 4/4 pass。Semgrep / Gitleaksと対象10ファイルの
   UTF-8・改行・BOM契約もpass。独立v7レビューはP0 / P1 / P2 / P3=0。
   PR #24のCIと`10e7cd0` merge後main CIもpass。
+- T-028 v1のexact staged treeはPowerShell 7.6.2でcheck:all 4/4を246.1秒、
+  Windows PowerShell 5.1.26100.8894で4/4を203.3秒でpass。OSS readinessは
+  11 example / 7 report schema / 4 hostile mutationと既存server-runbook 93 hostile
+  fixtureを両runtimeでpassした。Gitleaks working tree、local Semgrep rules、
+  HANDOFF同期前の変更6ファイルのstrict UTF-8 / BOMをpass。最終staged scopeは
+  7ファイルで、staged global hookと`git diff --cached --check`をpassした。
+  独立reviewでP2=4 / P3=2となったため、このv1結果だけではmergeしない。
+- T-028 v2のexact staged treeはPowerShell 7.6.2でcheck:all 4/4を256.5秒、
+  Windows PowerShell 5.1.26100.8894で4/4を206.7秒でpass。OSS readinessは
+  11 example / 7 report schema / 14 hostile mutationと既存server-runbook 93 hostile
+  fixtureを両runtimeでpassした。Gitleaks working tree、local Semgrep rules、
+  対象7ファイルのstrict UTF-8 / BOM、staged global hook、
+  `git diff --cached --check`もpassした。独立reviewで表セルの`error`偽合格、
+  ordered-list / 英語`unverified`のmutation不足、この証跡欄の旧値をP2=3として確認した
+  ため、このv2結果だけではmergeしない。
+- T-028 v3のindex＋working-tree unionはPowerShell 7.6.2と
+  Windows PowerShell 5.1.26100.8894でcheck:all 4/4をpass。OSS readinessは
+  11 example / 7 report schema / 17 hostile mutationと既存server-runbook 93 hostile
+  fixtureを両runtimeでpassした。v3では表セルの`error`、ordered-listの`incomplete`、
+  英語`unverified`を独立mutationで拒否した。この証跡同期を含むexact staged treeを
+  integration freezeとして、両runtime full gate / security / UTF-8 / diff /
+  独立reviewのclearanceを必須とする。wall-clock秒数はmachine loadで変動する外部実測で
+  あり、このhandoffのsame-freeze contractには含めない。
 
 ## 残懸念・未確認
 
@@ -128,6 +160,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
 - 外部利用者の存在・利用実態（star / fork / 転用事例）は `未確認`。
 - examples はすべて合成データ。実プロジェクトへ転用するときは route / URL / fixture /
   browser evidence を各案件の実測に置き換える。
+- T-028はreport契約の合成exampleとrepository readinessだけを検証した。実ブラウザ / 実UI、
+  deploy、OAuth、secret、実データ、費用操作は実施していない。
 
 ## 引き継ぎ時の注意
 

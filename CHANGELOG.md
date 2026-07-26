@@ -10,7 +10,8 @@ All notable changes to this project are recorded here.
   `TASKS_BACKLOG.md` を追加しました。
 - 合成データのみの verification report example 群を `examples/` に追加しました:
   evidence matrix / failed verification / protected route (login/OAuth blocked) /
-  responsive overflow / blank render target / hover-focus state。
+  responsive overflow / blank render target / hover-focus state /
+  loading-empty-error state。
 - Scanner hardening: 秘匿値プレフィックスの拡充（AWS / GCP / Slack / Stripe / PEM）、
   self-exempt hole の修正、除外ディレクトリ集合の単一情報源化
   （`scripts/private-scan-config.ps1`）、whitespace check の単一エントリ点
@@ -45,6 +46,10 @@ All notable changes to this project are recorded here.
   引き続き人間承認待ちで、採用していません。
 - OSS readinessで現行CIのtrigger、permissions、job、step所有境界を完全一致検証します。
   `actions/checkout@v4`のmutable tagは未解決のowner-gated残差で、immutable保証ではありません。
+- OSS readinessで全公開exampleのfile名・表示名・README / SKILLリンク・report証跡カテゴリを
+  role付きの1つのexact manifestへ閉じました。再帰的な未宣言file、リンク / state行の
+  comment・fence decoy、example名drift、完了済みstateへの相反する`未確認` / blocked /
+  failed / error追記を17の合成mutationで拒否します。
 - `SKILL.md` の Playwright 推奨例を、`networkidle` 依存から `load` と route/state 固有 locator の
   bounded readiness 待機へ変更しました。
 - 合成server runbookを単一の`try`/`finally` workflowへ更新し、実server executableの
