@@ -6,6 +6,13 @@ All notable changes to this project are recorded here.
 
 ### Added
 
+- `SKILL.md`のPlaywright推奨例を、有限navigationとroute/state固有locator待機の
+  順序付きcontractとして検証するrepository readiness checkとhostile mutationを追加しました。
+  comment、quoted string、template literal、別fence内のdecoyをactive codeから除外し、
+  未終端のJavaScript lexical regionとunescaped template interpolationをfail closedにします。
+  HTML commentは同じ長さの空白へmaskし、前後のH2・fence delimiter断片を連結しません。
+  CommonMarkで有効な0〜3個の先頭空白を持つATX H1 / H2も構造として認識します。
+  推奨例のconsole message整形は、同じ出力を保つ文字列連結へ置き換えました。
 - Codex 自走運用契約 `AGENTS.md`、引き継ぎ文書 `HANDOFF.md`、残タスク台帳
   `TASKS_BACKLOG.md` を追加しました。
 - 合成データのみの verification report example 群を `examples/` に追加しました:

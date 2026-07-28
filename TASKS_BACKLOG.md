@@ -37,6 +37,7 @@
 | T-027 | bounded server runbook の cleanup を直接process所有・例外安全・fail-closed にする | `AGENTS.md` §10 と独立レビュー | 高 | L | done (PR #24) |
 | T-028 | loading / empty / error state の合成report例と全公開exampleのreadiness契約を追加する | `SKILL.md` の状態確認要件と公開example検証のcoverage gap | 中 | M | done (PR #26) |
 | T-029 | 要件再定義ドラフトの確認済み事実を現行状態へ同期する | 2026-07-28 current-state drift | 中 | S | done |
+| T-030 | Playwright 推奨例の bounded readiness 契約を hostile mutation で回帰固定する | T-025 後の検査欠落と配布先copyのdrift | 高 | M | in_progress |
 
 ## 補足メモ
 
@@ -115,6 +116,24 @@
   - **検証**: public exampleのmanifest実測、GitHub issue / PR / CI実測、PowerShell 5.1の
     check:all 4ステップ、private marker / whitespaceを確認する。文書のみのため挙動REDは
     非該当とする。
+- **T-030 の実装契約（2026-07-28）**:
+  - **目的**: T-025で修正した`SKILL.md`のPlaywright推奨例を、`load`までの有限navigationと
+    route/state固有locatorの有限`visible`待機という順序付き契約へ閉じる。説明文中の
+    `networkidle`言及は許可しつつ、実行例が旧待機へ戻るdriftをfail closedにする。
+  - **影響**: `SKILL.md`の既存推奨例とrepository readiness検証だけを対象にする。
+    導入先UIのlocator、製品要件、scanner走査対象、workflow、配布先copyは変更しない。
+  - **検証**: 対象H2内の単一JavaScript fenceだけを抽出し、bounded `goto`、
+    `readyLocator.waitFor`、実行順序を検証する。active tokenをline / block comment、
+    single / double quoted string、template literalの外側だけから確定し、unescaped template
+    interpolationは内容にかかわらずfail closedにする。`networkidle`復帰、
+    timeout欠落、locator待機欠落、順序逆転、comment / string / template / 別fence decoy、
+    未終端fence / string / template、template interpolation、code / H2の大小文字drift、
+    HTML commentによるH2 / fence delimiter分断、0〜3空白indentを含む重複H2を含む
+    28 hostile mutationを拒否し、indent付きの別H2がsectionを閉じるpositive fixtureも
+    合格させる。このself-testをWindows PowerShell 5.1 / PowerShell 7で実行し、
+    check:all 4ステップを両runtimeで通す。
+  - **安全境界**: 合成文字列の静的検査だけを行う。実ブラウザ、実UI、deploy、OAuth、secret、
+    実データ、有料サービスは利用しない。配布先copyの更新はrepo merge後の別境界とする。
 
 ## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
 

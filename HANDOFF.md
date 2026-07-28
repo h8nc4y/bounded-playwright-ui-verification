@@ -27,7 +27,8 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 / T-021 / T-023 / T-025〜T-028 は完了。T-026ではscannerを
+- T-001〜T-017 / T-021 / T-023 / T-025〜T-029 は完了。T-030は挙動検証完了、
+  最終文書同期treeの再検証・独立review待ち。T-026ではscannerを
   bounded process、hermetic Git、index＋全working tree（untracked textを含む）、
   scan-wide deadline、atomic redacted outputのfail-closed境界へ更新した。first-call ASTは
   target shadow、Alias/Function provider代入、module-qualified bootstrap/provenance、
@@ -85,14 +86,30 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
   11ファイル、T-021完了、Debianコンテナ確認済み・macOS/native Linux host未確認、
   2026-07-28のGitHub実状態へ同期した。D1〜D4 / O1〜O3、verdict、applicability、
   scanner走査対象、bounded契約、Non-Goalsの意味は変更していない。
+- T-030は、T-025で修正した`SKILL.md`のPlaywright推奨例を`assert-oss-ready.ps1`が
+  検査しておらず、配布先copyが旧`networkidle`例のままdriftしている事実から着手した。
+  repo内の推奨例だけを順序付きbounded readiness契約とhostile mutationで回帰固定する。
+  active tokenはline / block comment、single / double quoted string、template literalの外側だけから
+  確定し、未終端comment / string / templateとunescaped template interpolationは
+  fail closedにする。escaped `\${`はliteralとして扱い、H2名とcodeのexact patternは
+  大小文字を区別する。
+  HTML commentは削除せず同じ長さの空白へmaskし、前後のdelimiter断片を連結しない。
+  CommonMarkのATX heading契約に合わせ、H1 / H2は0〜3個の先頭空白を構造として認識する。
+  indent付きの別H2が対象sectionを閉じるpositive fixtureもself-testへ含める。
+  推奨例に既存のbenign interpolationが1行あったため、出力を変えない文字列連結へ置換した。
+  Windows PowerShell 5.1とPowerShell 7のfocused self-testで28 hostile mutationの拒否を
+  実測した。
+  配布先copyはこのtaskで編集せず、repo merge後にstatic/no-LLM scan、manual diff、
+  hash照合を行う別境界とする。
 
 ## 次の一手
 
 1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
    private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
-2. **Codex（回答待ちに自走可）**: 新たな具体的coverage gap、失敗、または安全な
-   maintenance候補が確認できた場合だけ次のtaskとして台帳化する。現時点で未完了の
-   既知taskはすべて上記の人間gate対象。
+2. **Codex（進行中）**: T-030のexact freezeを作成し、独立reviewでP0〜P3=0の
+   CLEARを得る。指摘があれば修正・再検証・再freezeする。
+3. **Codex（T-030 merge後の別境界）**: 配布先copyを更新する前にSkillSpector wrapperの
+   static/no-LLM scan、manual diff、hash照合、独立CLEARを完了する。旧copyはそれまで編集しない。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -113,6 +130,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
 
 ### 最新の検証結果（2026-07-28、本ファイル更新時）
 
+- T-030着手前のWindows PowerShell 5.1 baselineはcheck:all 4ステップがpass。
+  REDでは`SKILL.md`の実行例を旧`networkidle`へ戻しても現行`assert-oss-ready.ps1`が
+  passし、`waitUntil`、timeout、locator待機を検査していないことを実測した。追加した
+  contractのfocused self-testはWindows PowerShell 5.1 / PowerShell 7で、
+  timeout / wait欠落、順序逆転、comment / quoted string / template literal / 別fence decoy、
+  未終端lexical region、unescaped / escaped template interpolation、code / H2の
+  大小文字drift、HTML commentによるdelimiter分断、indent付きduplicate H2など
+  28 mutationをすべて拒否した。
+  配布先copyのhashはrepo内`SKILL.md`と不一致で旧`networkidle`例を
+  保持しているが、配布先copyは未変更。最終check:all 4ステップはWindows PowerShell 5.1 /
+  PowerShell 7の両runtimeでpass。公開exampleは11件 / report schemaは7件 /
+  hostile mutationは17件、server-runbook contractはhostile fixture 93件を拒否した。
+  PowerShell 7のstderrは0、両runtimeのscanner / runner親子process残留は0。
+  この実測値を反映したdocs-only差分を含むcombined treeをmerge前のexact check対象とする。
 - T-029の文書同期後、Windows PowerShell 5.1でcheck:all 4ステップがpass。
   OSS readinessは公開example 11件 / report schema 7件 / hostile mutation 17件、
   server-runbook contractはhostile fixture 93件を拒否した。scanner要件・example・
@@ -181,6 +212,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   browser evidence を各案件の実測に置き換える。
 - T-028はreport契約の合成exampleとrepository readinessだけを検証した。実ブラウザ / 実UI、
   deploy、OAuth、secret、実データ、費用操作は実施していない。
+- T-030はrepository内の静的契約だけを検証する。実ブラウザ / 実UIとnative Linux / macOS、
+  配布先copyの更新は`未実施`。
 
 ## 引き継ぎ時の注意
 

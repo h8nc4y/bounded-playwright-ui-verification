@@ -97,7 +97,7 @@ const findings = [];
 let consoleMessages = [];
 page.on("console", (message) => {
   if (["error", "warning"].includes(message.type())) {
-    consoleMessages.push(`${message.type()}: ${message.text()}`);
+    consoleMessages.push(message.type() + ": " + message.text());
   }
 });
 
