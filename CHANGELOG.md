@@ -39,6 +39,10 @@ All notable changes to this project are recorded here.
 
 ### Changed
 
+- Windows hosted runnerの負荷でscanner process回帰が誤失敗しないよう、sub-second精度を
+  `WaitForExit(int milliseconds)`からWin32 waitへの直接委譲という構造契約へ分離しました。
+  runtime/tree cleanupはtarget・grandchild開始後のrelease sentinel、prelaunchはtarget非起動を
+  意味論oracleとし、elapsedは有限hang guardだけに限定します。各失敗境界は固定labelで報告します。
 - README「What It Solves」を pre-claim evidence contract の定式化（bounded execution /
   truthful reporting / evidence separation）で明確化しました。対象範囲・Non-Goals・
   判定基準は不変です。

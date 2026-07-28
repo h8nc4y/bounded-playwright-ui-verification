@@ -2629,12 +2629,51 @@ Assert-FileContains `
   -Description "remaining-budget check immediately before process start"
 Assert-FileContains `
   -RelativePath "tests/scan-private-markers.Tests.ps1" `
-  -Pattern '\$timeoutMilliseconds = if \(\$runtimeIsWindows\) \{ 300 \} else \{ 4000 \}(?s:.{0,300})\$timeoutElapsedLimitMilliseconds\s*=(?s:.{0,100})if \(\$runtimeIsWindows\) \{ 900 \} else \{ 7000 \}' `
-  -Description "platform-bounded timeout and process-tree sentinel regression"
+  -Pattern 'function Test-PrivateMarkerMillisecondWaitContract(?s:.{0,5000})\$boundedTypeSources(?s:.{0,5000})\$expectedRemainingFunction(?s:.{0,4000})\$expectedNativeWaitRegion(?s:.{0,5000})\$allNativeWaitCalls\.Count -ne 1(?s:.{0,3000})\$lastRemainingAssignment(?s:.{0,1500})\$actualNativeWaitRegion' `
+  -Description "host-independent millisecond wait contract regression"
 Assert-FileContains `
   -RelativePath "tests/scan-private-markers.Tests.ps1" `
-  -Pattern '\$timeoutGrandchildStarted(?s:.{0,300})\$timeoutSurvivalRelease(?s:.{0,2500})__GRANDCHILD_STARTED__(?s:.{0,800})__SURVIVAL_RELEASE__(?s:.{0,800})__SURVIVAL_SENTINEL__' `
-  -Description "POSIX released-grandchild process-tree oracle"
+  -Pattern '\$timeoutMilliseconds\s*=\s*4000(?s:.{0,300})\$timeoutElapsedLimitMilliseconds\s*=(?s:.{0,100})if \(\$runtimeIsWindows\) \{ 10000 \} else \{ 15000 \}(?s:.{0,800})\$releaseWait\.ElapsedMilliseconds -lt 25000(?s:.{0,1000})__GRANDCHILD_STARTED__(?s:.{0,800})__SURVIVAL_RELEASE__(?s:.{0,800})__SURVIVAL_SENTINEL__' `
+  -Description "platform-bounded released-grandchild process-tree regression"
+Assert-FileContains `
+  -RelativePath "scripts/private-marker-process.ps1" `
+  -Pattern 'public bool WaitForExit\(int milliseconds\)(?s:.{0,160})return WaitForSingleObject\(processHandle, \(uint\)milliseconds\)' `
+  -Description "direct millisecond Win32 wait implementation"
+Assert-FileContains `
+  -RelativePath "tests/scan-private-markers.Tests.ps1" `
+  -Pattern '\$preLaunchElapsedLimitMilliseconds\s*=\s*5000' `
+  -Description "prelaunch finite hang guard"
+foreach ($boundedProcessDiagnosticLabel in @(
+    'timeout/millisecond-structure-contract',
+    'timeout/millisecond-caller-rounding-mutation',
+    'timeout/millisecond-helper-rounding-mutation',
+    'timeout/millisecond-comment-decoy-mutation',
+    'timeout/millisecond-string-decoy-mutation',
+    'timeout/millisecond-csharp-comment-decoy-mutation',
+    'timeout/millisecond-csharp-string-decoy-mutation',
+    'timeout/millisecond-extra-wait-mutation',
+    'timeout/timed-out',
+    'timeout/containment-established',
+    'timeout/tree-stopped',
+    'timeout/streams-drained',
+    'timeout/elapsed-hang-guard',
+    'timeout/target-started',
+    'timeout/grandchild-started',
+    'timeout/sentinel-not-written',
+    'prelaunch/timed-out',
+    'prelaunch/containment-not-established',
+    'prelaunch/tree-stopped',
+    'prelaunch/streams-drained',
+    'prelaunch/elapsed-hang-guard',
+    'prelaunch/target-not-started'
+  )) {
+  Assert-FileContains `
+    -RelativePath "tests/scan-private-markers.Tests.ps1" `
+    -Pattern ('(?-i:' +
+      [regex]::Escape("[$boundedProcessDiagnosticLabel]") +
+      ')') `
+    -Description "condition-specific bounded process diagnostic: $boundedProcessDiagnosticLabel"
+}
 Assert-FileContains `
   -RelativePath "tests/scan-private-markers.Tests.ps1" `
   -Pattern 'ForcePreLaunchDelayMilliseconds 250(?s:.*?)ForcePosixGateDelayMilliseconds 250' `

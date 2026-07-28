@@ -117,6 +117,211 @@ function Test-BoundedResultHealthy {
         $Result.StreamsDrained
 }
 
+# Win32 waitまでのmillisecond値をsource構造で検証し、host schedulerを精度oracleに使わない。
+function Test-PrivateMarkerMillisecondWaitContract {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source
+    )
+
+    $tokens = $null
+    $parseErrors = $null
+    $sourceAst = [Management.Automation.Language.Parser]::ParseInput(
+        $Source,
+        [ref]$tokens,
+        [ref]$parseErrors
+    )
+    if (@($parseErrors).Count -ne 0) {
+        return $false
+    }
+    $normalizeNewlines = {
+        param([string]$Text)
+        return $Text.Replace("`r`n", "`n").Replace("`r", "`n")
+    }
+
+    # 実際にAdd-Typeへ渡るhere-stringだけを特定し、PowerShell側decoyを証拠に数えない。
+    $boundedTypeSources = @(
+        foreach ($command in @($sourceAst.FindAll({
+            param($node)
+            $node -is [Management.Automation.Language.CommandAst] -and
+                $node.GetCommandName() -ceq 'Add-Type'
+        }, $true))) {
+            $elements = @($command.CommandElements)
+            if ($elements.Count -ne 3 -or
+                $elements[1] -isnot
+                    [Management.Automation.Language.CommandParameterAst] -or
+                $elements[1].ParameterName -cne 'TypeDefinition' -or
+                $elements[2] -isnot
+                    [Management.Automation.Language.StringConstantExpressionAst]) {
+                continue
+            }
+            $typeSource = [string]$elements[2].Value
+            if ($typeSource.Contains(
+                'public sealed class BoundedPlaywrightContainedProcess'
+            )) {
+                $typeSource
+            }
+        }
+    )
+    if ($boundedTypeSources.Count -ne 1) {
+        return $false
+    }
+
+    # C# wrapperは秒換算を挟まず、受け取ったint millisecondsをWin32へ直接渡す。
+    $expectedWaitMethod = @'
+    public bool WaitForExit(int milliseconds)
+    {
+        return WaitForSingleObject(processHandle, (uint)milliseconds) ==
+            WaitObject0;
+    }
+'@
+    $boundedTypeSource = & $normalizeNewlines $boundedTypeSources[0]
+    $normalizedWaitMethod = & $normalizeNewlines $expectedWaitMethod
+    $waitMethodIndex = $boundedTypeSource.IndexOf(
+        $normalizedWaitMethod,
+        [StringComparison]::Ordinal
+    )
+    if ($waitMethodIndex -lt 0 -or
+        $waitMethodIndex -ne $boundedTypeSource.LastIndexOf(
+            $normalizedWaitMethod,
+            [StringComparison]::Ordinal
+        ) -or
+        [regex]::Matches(
+            $boundedTypeSource,
+            '(?m)^[ \t]*public bool WaitForExit\s*\('
+        ).Count -ne 1) {
+        return $false
+    }
+
+    # exact Win32 importも同じAdd-Type sourceへ1件だけ存在させ、別wrapperへ逸らさない。
+    $waitForSingleObjectImport =
+        'private static extern uint WaitForSingleObject(' +
+        'IntPtr handle, uint milliseconds);'
+    $waitImportIndex = $boundedTypeSource.IndexOf(
+        $waitForSingleObjectImport,
+        [StringComparison]::Ordinal
+    )
+    if ($waitImportIndex -lt 0 -or
+        $waitImportIndex -ne $boundedTypeSource.LastIndexOf(
+            $waitForSingleObjectImport,
+            [StringComparison]::Ordinal
+        )) {
+        return $false
+    }
+
+    # remaining helper全体をexact化し、deadline差分からintへ直返しする経路だけを許す。
+    $expectedRemainingFunction = @'
+function Get-PrivateMarkerRemainingMilliseconds {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Stopwatch]$Stopwatch,
+
+        [Parameter(Mandatory = $true)]
+        [long]$DeadlineMilliseconds
+    )
+
+    $remaining = $DeadlineMilliseconds - $Stopwatch.ElapsedMilliseconds
+    if ($remaining -le 0) {
+        return 0
+    }
+    if ($remaining -gt [int]::MaxValue) {
+        return [int]::MaxValue
+    }
+    return [int]$remaining
+}
+'@
+    $remainingFunctions = @($sourceAst.FindAll({
+        param($node)
+        $node -is
+            [Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -ceq 'Get-PrivateMarkerRemainingMilliseconds'
+    }, $true))
+    if ($remainingFunctions.Count -ne 1 -or
+        (& $normalizeNewlines $remainingFunctions[0].Extent.Text) -cne
+            (& $normalizeNewlines $expectedRemainingFunction)) {
+        return $false
+    }
+
+    # 最後のremaining代入からnative waitまでを連続exact regionへ閉じ、再代入を許さない。
+    $expectedNativeWaitRegion = @'
+        $remaining = if ($null -eq $cleanupClock) {
+            Get-PrivateMarkerRemainingMilliseconds `
+                -Stopwatch $stopwatch `
+                -DeadlineMilliseconds $deadline
+        } else {
+            Get-PrivateMarkerRemainingMilliseconds `
+                -Stopwatch $cleanupClock `
+                -DeadlineMilliseconds $cleanupDeadlineMilliseconds
+        }
+        $streamsCompleted = $stdinClosed -and $stdoutClosed -and $stderrClosed
+        $processExited = $false
+        if ($streamsCompleted -and [string]::IsNullOrEmpty($limitExceeded)) {
+            $processExited = if ($null -ne $nativeChild) {
+                $nativeChild.WaitForExit($remaining)
+'@
+    $atomicFunctions = @($sourceAst.FindAll({
+        param($node)
+        $node -is
+            [Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -ceq 'Invoke-PrivateMarkerAtomicWindowsProcess'
+    }, $true))
+    if ($atomicFunctions.Count -ne 1) {
+        return $false
+    }
+
+    # 引数にかかわらずnativeChild.WaitForExitを全件数え、実行callを1件だけ許す。
+    $allNativeWaitCalls = @($atomicFunctions[0].Body.FindAll({
+        param($node)
+        if ($node -isnot
+            [Management.Automation.Language.InvokeMemberExpressionAst]) {
+            return $false
+        }
+        if ($node.Expression -isnot
+                [Management.Automation.Language.VariableExpressionAst] -or
+            $node.Expression.VariablePath.UserPath -cne 'nativeChild' -or
+            $node.Member.Value -cne 'WaitForExit') {
+            return $false
+        }
+        return $true
+    }, $true))
+    if ($allNativeWaitCalls.Count -ne 1) {
+        return $false
+    }
+    $nativeWaitCall = $allNativeWaitCalls[0]
+    if ($nativeWaitCall.Arguments.Count -ne 1 -or
+        $nativeWaitCall.Arguments[0] -isnot
+            [Management.Automation.Language.VariableExpressionAst] -or
+        $nativeWaitCall.Arguments[0].VariablePath.UserPath -cne 'remaining') {
+        return $false
+    }
+
+    # 実行call直前の最後のremaining代入をASTで選び、その実extentだけをexact比較する。
+    $remainingAssignments = @($atomicFunctions[0].Body.FindAll({
+        param($node)
+        $node -is
+            [Management.Automation.Language.AssignmentStatementAst] -and
+            $node.Left -is
+                [Management.Automation.Language.VariableExpressionAst] -and
+            $node.Left.VariablePath.UserPath -ceq 'remaining'
+    }, $true) | Where-Object {
+        $_.Extent.EndOffset -le $nativeWaitCall.Extent.StartOffset
+    } | Sort-Object -Property { $_.Extent.StartOffset })
+    if ($remainingAssignments.Count -eq 0) {
+        return $false
+    }
+    $lastRemainingAssignment = $remainingAssignments[-1]
+    $nativeWaitRegionStartOffset =
+        $lastRemainingAssignment.Extent.StartOffset -
+        ($lastRemainingAssignment.Extent.StartColumnNumber - 1)
+    $actualNativeWaitRegion = $Source.Substring(
+        $nativeWaitRegionStartOffset,
+        $nativeWaitCall.Extent.EndOffset -
+            $nativeWaitRegionStartOffset
+    )
+    return (& $normalizeNewlines $actualNativeWaitRegion) -ceq
+        (& $normalizeNewlines $expectedNativeWaitRegion)
+}
+
 # function/type 定義や未実行 scriptblock 内の helper call は「先に実行済み」
 # ではない。AST の親を辿り、実行可能な top-level call だけを識別する。
 function Test-PrivateMarkerCommandIsDeferredDefinition {
@@ -2751,6 +2956,166 @@ exit 0
     )
     $scannerSource = [IO.File]::ReadAllText($scanner)
     $processSupportSource = [IO.File]::ReadAllText($processSupport)
+
+    if (-not (Test-PrivateMarkerMillisecondWaitContract `
+            -Source $processSupportSource)) {
+        Add-Failure '[timeout/millisecond-structure-contract] Expected an unrounded deadline-to-Win32 wait path.'
+    }
+
+    # caller/helperの丸めとcomment/string decoyが構造検査をすり抜けないことも自己検証する。
+    $millisecondCallerAnchor = '$nativeChild.WaitForExit($remaining)'
+    $millisecondRoundedCaller =
+        '$nativeChild.WaitForExit(([int]([Math]::Ceiling(' +
+        '$remaining / 1000.0) * 1000)))'
+    $millisecondHelperAnchor = '    return [int]$remaining'
+    $millisecondRoundedHelper =
+        '    return [int]([Math]::Ceiling($remaining / 1000.0) * 1000)'
+    $millisecondWaitBodyAnchor =
+        'return WaitForSingleObject(processHandle, (uint)milliseconds) =='
+    $millisecondRoundedWaitBody =
+        'return WaitForSingleObject(processHandle, ' +
+        '(uint)(Math.Ceiling(milliseconds / 1000.0) * 1000)) =='
+    $millisecondExactWaitMethod = @'
+    public bool WaitForExit(int milliseconds)
+    {
+        return WaitForSingleObject(processHandle, (uint)milliseconds) ==
+            WaitObject0;
+    }
+'@
+    $millisecondLineEnding = if ($processSupportSource.Contains("`r`n")) {
+        "`r`n"
+    } else {
+        "`n"
+    }
+    $roundedCallerSource = $processSupportSource.Replace(
+        $millisecondCallerAnchor,
+        $millisecondRoundedCaller
+    )
+    $roundedCSharpWaitSource = $processSupportSource.Replace(
+        $millisecondWaitBodyAnchor,
+        $millisecondRoundedWaitBody
+    )
+    $csharpCommentDecoySource =
+        $roundedCSharpWaitSource + $millisecondLineEnding +
+        '<#' + $millisecondLineEnding +
+        $millisecondExactWaitMethod + $millisecondLineEnding +
+        '#>'
+    $csharpStringDecoySource =
+        $roundedCSharpWaitSource + $millisecondLineEnding +
+        "`$millisecondWaitMethodDecoy = @'" + $millisecondLineEnding +
+        $millisecondExactWaitMethod + $millisecondLineEnding +
+        "'@"
+    $millisecondRegionStartAnchor =
+        '        $remaining = if ($null -eq $cleanupClock) {'
+    $millisecondRegionEndAnchor =
+        '                $nativeChild.WaitForExit($remaining)'
+    $millisecondRegionStartIndex = $processSupportSource.IndexOf(
+        $millisecondRegionStartAnchor,
+        [StringComparison]::Ordinal
+    )
+    $millisecondRegionEndIndex = $processSupportSource.IndexOf(
+        $millisecondRegionEndAnchor,
+        [Math]::Max(0, $millisecondRegionStartIndex),
+        [StringComparison]::Ordinal
+    )
+    $millisecondOriginalWaitRegion = ''
+    if ($millisecondRegionStartIndex -ge 0 -and
+        $millisecondRegionEndIndex -ge $millisecondRegionStartIndex) {
+        $millisecondOriginalWaitRegion = $processSupportSource.Substring(
+            $millisecondRegionStartIndex,
+            $millisecondRegionEndIndex +
+                $millisecondRegionEndAnchor.Length -
+                $millisecondRegionStartIndex
+        )
+    }
+    $millisecondStreamsAnchor =
+        '        $streamsCompleted = $stdinClosed -and $stdoutClosed -and $stderrClosed'
+    $millisecondRoundedReassignment =
+        '        $remaining = [int]([Math]::Ceiling(' +
+        '$remaining / 1000.0) * 1000)'
+    $commentDecoySource = $processSupportSource
+    $stringDecoySource = $processSupportSource
+    $extraWaitSource = $processSupportSource
+    if (-not [string]::IsNullOrEmpty($millisecondOriginalWaitRegion)) {
+        # 期待region全文をdecoyへ残しつつ、実行側だけ再代入するhostile sourceを作る。
+        $commentDecoyInsertion =
+            '        <#' + $millisecondLineEnding +
+            $millisecondOriginalWaitRegion + $millisecondLineEnding +
+            '        #>' + $millisecondLineEnding +
+            $millisecondRoundedReassignment + $millisecondLineEnding +
+            $millisecondStreamsAnchor
+        $commentDecoySource = $processSupportSource.Replace(
+            $millisecondStreamsAnchor,
+            $commentDecoyInsertion
+        )
+        $stringDecoyInsertion =
+            "        `$millisecondWaitDecoy = @'" +
+            $millisecondLineEnding +
+            $millisecondOriginalWaitRegion + $millisecondLineEnding +
+            "'@" + $millisecondLineEnding +
+            $millisecondRoundedReassignment + $millisecondLineEnding +
+            $millisecondStreamsAnchor
+        $stringDecoySource = $processSupportSource.Replace(
+            $millisecondStreamsAnchor,
+            $stringDecoyInsertion
+        )
+        $extraWaitInsertion =
+            '                [void]$nativeChild.WaitForExit(' +
+            $millisecondLineEnding +
+            '                    [int]([Math]::Ceiling(' +
+            '$remaining / 1000.0) * 1000)' +
+            $millisecondLineEnding +
+            '                )' + $millisecondLineEnding +
+            $millisecondRegionEndAnchor
+        $extraWaitSource = $processSupportSource.Replace(
+            $millisecondRegionEndAnchor,
+            $extraWaitInsertion
+        )
+    }
+    $millisecondContractMutations = @(
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-caller-rounding-mutation]'
+            Source = $roundedCallerSource
+        },
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-helper-rounding-mutation]'
+            Source = $processSupportSource.Replace(
+                $millisecondHelperAnchor,
+                $millisecondRoundedHelper
+            )
+        },
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-comment-decoy-mutation]'
+            Source = $commentDecoySource
+        },
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-string-decoy-mutation]'
+            Source = $stringDecoySource
+        },
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-csharp-comment-decoy-mutation]'
+            Source = $csharpCommentDecoySource
+        },
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-csharp-string-decoy-mutation]'
+            Source = $csharpStringDecoySource
+        },
+        [pscustomobject]@{
+            Label = '[timeout/millisecond-extra-wait-mutation]'
+            Source = $extraWaitSource
+        }
+    )
+    foreach ($millisecondContractMutation in $millisecondContractMutations) {
+        if ($millisecondContractMutation.Source -ceq $processSupportSource -or
+            (Test-PrivateMarkerMillisecondWaitContract `
+                -Source $millisecondContractMutation.Source)) {
+            Add-Failure (
+                "$($millisecondContractMutation.Label) " +
+                'Expected the millisecond wait contract to reject rounding or decoy drift.'
+            )
+        }
+    }
+
     $diagnosticInjectionAnchor =
         'if ([string]::IsNullOrWhiteSpace($Path)) {'
     if (-not $scannerSource.Contains($diagnosticInjectionAnchor)) {
@@ -2898,46 +3263,35 @@ function Invoke-PrivateMarkerBoundedProcess {
         $timeoutGrandchildStarted.Replace("'", "''")
     $escapedTimeoutSurvivalRelease =
         $timeoutSurvivalRelease.Replace("'", "''")
-    # 300ms指定を1秒へ切り上げる旧実装なら700ms sentinelが書かれる。
-    # sub-second値をそのまま使うatomic Windows deadlineだけが書込み前に停止できる。
-    # POSIXはverified group wrapperとtargetの2段pwsh起動を通るため、
-    # containment確立後にtargetへ到達できる独立した有限budgetでtree killを検証する。
-    $timeoutMilliseconds = if ($runtimeIsWindows) { 300 } else { 4000 }
+    # runtime/tree cleanupはsub-second精度と分離し、両OSでtarget/grandchild開始後に
+    # release sentinelを使う。host起動速度ではなくcleanup後の生存だけを判定する。
+    $timeoutMilliseconds = 4000
+    # POSIX/reused Jobは4秒operation後に最大10秒cleanupを持つため、総guardも包絡する。
     $timeoutElapsedLimitMilliseconds =
-        if ($runtimeIsWindows) { 900 } else { 7000 }
-    $grandchildScript = if ($runtimeIsWindows) {
-        @"
-Start-Sleep -Milliseconds 700
-[System.IO.File]::WriteAllText('$escapedTimeoutSentinel', 'survived')
-"@
-    } else {
-        # return後にreleaseするため、生存grandchildは即座にsentinelを書ける。
-        # 固定delay待ちより短く、targetの起動時刻にも依存しないtree-kill oracleになる。
-        $posixGrandchildScript = @'
+        if ($runtimeIsWindows) { 10000 } else { 15000 }
+    $grandchildScript = @'
 [System.IO.File]::WriteAllText('__GRANDCHILD_STARTED__', 'started')
 $releaseWait = [System.Diagnostics.Stopwatch]::StartNew()
 while (-not [System.IO.File]::Exists('__SURVIVAL_RELEASE__') -and
-    $releaseWait.ElapsedMilliseconds -lt 15000) {
+    $releaseWait.ElapsedMilliseconds -lt 25000) {
     Start-Sleep -Milliseconds 25
 }
 if ([System.IO.File]::Exists('__SURVIVAL_RELEASE__')) {
     [System.IO.File]::WriteAllText('__SURVIVAL_SENTINEL__', 'survived')
 }
 '@
-        $posixGrandchildScript = $posixGrandchildScript.Replace(
-                '__GRANDCHILD_STARTED__',
-                $escapedTimeoutGrandchildStarted
-            )
-        $posixGrandchildScript = $posixGrandchildScript.Replace(
-                '__SURVIVAL_RELEASE__',
-                $escapedTimeoutSurvivalRelease
-            )
-        $posixGrandchildScript = $posixGrandchildScript.Replace(
-            '__SURVIVAL_SENTINEL__',
-            $escapedTimeoutSentinel
-        )
-        $posixGrandchildScript
-    }
+    $grandchildScript = $grandchildScript.Replace(
+        '__GRANDCHILD_STARTED__',
+        $escapedTimeoutGrandchildStarted
+    )
+    $grandchildScript = $grandchildScript.Replace(
+        '__SURVIVAL_RELEASE__',
+        $escapedTimeoutSurvivalRelease
+    )
+    $grandchildScript = $grandchildScript.Replace(
+        '__SURVIVAL_SENTINEL__',
+        $escapedTimeoutSentinel
+    )
     $grandchildEncoded = [Convert]::ToBase64String(
         [System.Text.Encoding]::Unicode.GetBytes($grandchildScript)
     )
@@ -2963,33 +3317,37 @@ Start-Sleep -Seconds 30
         -IsolationRoot $timeoutIsolationRoot `
         -TimeoutMilliseconds $timeoutMilliseconds
     $timeoutStopwatch.Stop()
-    if (-not $timeoutResult.TimedOut -or
-        -not $timeoutResult.ContainmentEstablished -or
-        -not $timeoutResult.TreeStopped -or
-        -not $timeoutResult.StreamsDrained -or
-        # 旧Windows実装は300msを1秒へ切り上げるため、childの起動速度に
-        # 依存しないcall全体の上限でもsub-second適用を区別する。
-        $timeoutStopwatch.ElapsedMilliseconds -ge
-            $timeoutElapsedLimitMilliseconds) {
-        Add-Failure 'Expected the bounded child regression to time out and stop its process tree.'
+    # aggregate診断へ潰さず、公開して安全な固定labelで失敗境界を一意にする。
+    if (-not $timeoutResult.TimedOut) {
+        Add-Failure '[timeout/timed-out] Expected the bounded child operation to time out.'
     }
-    if (-not $runtimeIsWindows -and
-        -not (Test-Path -LiteralPath $timeoutTargetStarted)) {
-        Add-Failure 'Expected the POSIX bounded child regression to release and start its contained target.'
+    if (-not $timeoutResult.ContainmentEstablished) {
+        Add-Failure '[timeout/containment-established] Expected containment before target execution.'
     }
-    if (-not $runtimeIsWindows) {
-        if (-not (Test-Path -LiteralPath $timeoutGrandchildStarted)) {
-            Add-Failure 'Expected the POSIX bounded child regression to start its contained grandchild.'
-        }
-        # cleanup後にだけreleaseし、生き残ったgrandchildを即時に可視化する。
-        [IO.File]::WriteAllText($timeoutSurvivalRelease, 'release')
+    if (-not $timeoutResult.TreeStopped) {
+        Add-Failure '[timeout/tree-stopped] Expected timeout cleanup to stop the process tree.'
     }
+    if (-not $timeoutResult.StreamsDrained) {
+        Add-Failure '[timeout/streams-drained] Expected timeout cleanup to drain both streams.'
+    }
+    if ($timeoutStopwatch.ElapsedMilliseconds -ge
+        $timeoutElapsedLimitMilliseconds) {
+        Add-Failure '[timeout/elapsed-hang-guard] Expected the bounded timeout fixture to return within its finite hang guard.'
+    }
+    if (-not (Test-Path -LiteralPath $timeoutTargetStarted)) {
+        Add-Failure '[timeout/target-started] Expected the bounded child regression to start its contained target.'
+    }
+    if (-not (Test-Path -LiteralPath $timeoutGrandchildStarted)) {
+        Add-Failure '[timeout/grandchild-started] Expected the bounded child regression to start its contained grandchild.'
+    }
+    # cleanup後にだけreleaseし、生き残ったgrandchildを即時に可視化する。
+    [IO.File]::WriteAllText($timeoutSurvivalRelease, 'release')
     for ($attempt = 0; $attempt -lt 25 -and
         -not (Test-Path -LiteralPath $timeoutSentinel); $attempt++) {
         Start-Sleep -Milliseconds 100
     }
     if (Test-Path -LiteralPath $timeoutSentinel) {
-        Add-Failure 'Expected timeout cleanup to kill the grandchild before its delayed sentinel write.'
+        Add-Failure '[timeout/sentinel-not-written] Expected timeout cleanup to kill the grandchild before its delayed sentinel write.'
     }
     Assert-ProcessEnvironmentUnchanged `
         -Expected $beforeTimeoutEnvironment `
@@ -3009,6 +3367,8 @@ Start-Sleep -Seconds 30
         $preLaunchArguments += @('-ExecutionPolicy', 'Bypass')
     }
     $preLaunchArguments += @('-EncodedCommand', $preLaunchEncoded)
+    # target非起動が意味論oracle。elapsedはhost負荷と分離した有限hang guardに限定する。
+    $preLaunchElapsedLimitMilliseconds = 5000
     $preLaunchClock = [Diagnostics.Stopwatch]::StartNew()
     $preLaunchResult = Invoke-PrivateMarkerBoundedProcess `
         -FileName $currentPowerShellExecutable `
@@ -3017,13 +3377,24 @@ Start-Sleep -Seconds 30
         -TimeoutMilliseconds 100 `
         -ForcePreLaunchDelayMilliseconds 250
     $preLaunchClock.Stop()
-    if (-not $preLaunchResult.TimedOut -or
-        $preLaunchResult.ContainmentEstablished -or
-        -not $preLaunchResult.TreeStopped -or
-        -not $preLaunchResult.StreamsDrained -or
-        $preLaunchClock.ElapsedMilliseconds -ge 1500 -or
-        (Test-Path -LiteralPath $preLaunchSentinel)) {
-        Add-Failure 'Expected preparation time to consume the operation deadline before target launch.'
+    if (-not $preLaunchResult.TimedOut) {
+        Add-Failure '[prelaunch/timed-out] Expected preparation to consume the operation deadline.'
+    }
+    if ($preLaunchResult.ContainmentEstablished) {
+        Add-Failure '[prelaunch/containment-not-established] Expected expiry before containment.'
+    }
+    if (-not $preLaunchResult.TreeStopped) {
+        Add-Failure '[prelaunch/tree-stopped] Expected the prelaunch timeout result to confirm a stopped tree.'
+    }
+    if (-not $preLaunchResult.StreamsDrained) {
+        Add-Failure '[prelaunch/streams-drained] Expected the prelaunch timeout result to confirm drained streams.'
+    }
+    if ($preLaunchClock.ElapsedMilliseconds -ge
+        $preLaunchElapsedLimitMilliseconds) {
+        Add-Failure '[prelaunch/elapsed-hang-guard] Expected the prelaunch fixture to return within its finite hang guard.'
+    }
+    if (Test-Path -LiteralPath $preLaunchSentinel) {
+        Add-Failure '[prelaunch/target-not-started] Expected expiry before target launch.'
     }
 
     # The direct child can exit before a grandchild that inherited stdout. A
