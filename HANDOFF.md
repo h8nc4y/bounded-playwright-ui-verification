@@ -22,7 +22,7 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
 
-## 現状サマリ（2026-07-27 時点）
+## 現状サマリ（2026-07-28 時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
@@ -81,6 +81,10 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
   表セルの偽合格とcurrent docsの14件表記を独立reviewでP2=2として確認した。v4は
   inline-codeの可視本文を正規化し、3文書を17件へ同期。最終独立reviewは
   P0 / P1 / P2 / P3=0。PR #26を`a749422`へsquash mergeし、PR CIとmerge後main CIもpass。
+- T-029は要件再定義ドラフトの「確認済み事実」とタスク対応表を、公開example
+  11ファイル、T-021完了、Debianコンテナ確認済み・macOS/native Linux host未確認、
+  2026-07-28のGitHub実状態へ同期した。D1〜D4 / O1〜O3、verdict、applicability、
+  scanner走査対象、bounded契約、Non-Goalsの意味は変更していない。
 
 ## 次の一手
 
@@ -107,8 +111,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   コミット後に実行する。
 - package manager manifest は無く、依存インストールは不要。
 
-### 最新の検証結果（2026-07-27、本ファイル更新時）
+### 最新の検証結果（2026-07-28、本ファイル更新時）
 
+- T-029の文書同期後、Windows PowerShell 5.1でcheck:all 4ステップがpass。
+  OSS readinessは公開example 11件 / report schema 7件 / hostile mutation 17件、
+  server-runbook contractはhostile fixture 93件を拒否した。scanner要件・example・
+  実行可能templateは変更していない。
 - Windows PowerShell 5.1.26100.8894 / PowerShell 7.6.2: check:all
   4ステップ pass。scanner self-testはbinary standard stream、native Git batch byte、
   Job/process-group cleanup、first-call AST bypass、正常なlinked-worktree Gitfile、

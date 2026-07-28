@@ -52,6 +52,8 @@ All notable changes to this project are recorded here.
   failed / error追記を17の合成mutationで拒否します。
 - `SKILL.md` の Playwright 推奨例を、`networkidle` 依存から `load` と route/state 固有 locator の
   bounded readiness 待機へ変更しました。
+- 要件再定義ドラフトの確認済み事実を、公開example 11ファイル、T-021完了、
+  Debianコンテナ確認済み・macOS/native Linux host未確認という現行状態へ同期しました。
 - 合成server runbookを単一の`try`/`finally` workflowへ更新し、実server executableの
   直接起動、起動時`SafeHandle`の保持、5秒上限の停止確認、
   verification/cleanup両failureの伝播を追加しました。health timeoutはraw stderrを再生せず、
