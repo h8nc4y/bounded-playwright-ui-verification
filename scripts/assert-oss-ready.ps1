@@ -510,6 +510,854 @@ function Get-MarkdownH2Section {
   }
 }
 
+function Get-MarkdownH2RawSection {
+  param(
+    [string]$Content,
+    [string]$Heading
+  )
+
+  $sectionLines = New-Object System.Collections.Generic.List[string]
+  $headingMatchCount = 0
+  $collectSection = $false
+  $inFence = $false
+  $fenceCharacter = ""
+  $fenceLength = 0
+  $inHtmlComment = $false
+  $headingPattern = (
+    '^ {0,3}##[ \t]+' +
+    [regex]::Escape($Heading) +
+    '[ \t]*$'
+  )
+
+  foreach ($sourceLine in ($Content -split '\r?\n')) {
+    # 対象section内のfence本文はそのまま保持し、コード中の見かけ上のheadingを無視する。
+    if ($inFence) {
+      if ($collectSection) {
+        $sectionLines.Add($sourceLine) | Out-Null
+      }
+      $closingPattern = (
+        '^ {0,3}' +
+        [regex]::Escape($fenceCharacter) +
+        "{$fenceLength,}[ \t]*$"
+      )
+      if ($sourceLine -match $closingPattern) {
+        $inFence = $false
+        $fenceCharacter = ""
+        $fenceLength = 0
+      }
+      continue
+    }
+
+    # HTML comment内のheading / fence decoyは構造として扱わない。
+    $remaining = $sourceLine
+    $visible = ""
+    while ($remaining.Length -gt 0) {
+      if ($inHtmlComment) {
+        $commentEnd = $remaining.IndexOf(
+          "-->",
+          [StringComparison]::Ordinal
+        )
+        if ($commentEnd -lt 0) {
+          # commentを削除せず同じ長さの空白へ置換し、delimiter断片の連結を防ぐ。
+          $visible += (" " * $remaining.Length)
+          $remaining = ""
+          break
+        }
+        $visible += (" " * ($commentEnd + 3))
+        $remaining = $remaining.Substring($commentEnd + 3)
+        $inHtmlComment = $false
+        continue
+      }
+
+      $commentStart = $remaining.IndexOf(
+        "<!--",
+        [StringComparison]::Ordinal
+      )
+      if ($commentStart -lt 0) {
+        $visible += $remaining
+        $remaining = ""
+        break
+      }
+      $visible += $remaining.Substring(0, $commentStart)
+      $visible += (" " * 4)
+      $remaining = $remaining.Substring($commentStart + 4)
+      $inHtmlComment = $true
+    }
+
+    $openingFence = [regex]::Match(
+      $visible,
+      '^ {0,3}(?<Fence>`{3,}|~{3,}).*$'
+    )
+    if ($openingFence.Success) {
+      if ($collectSection) {
+        $sectionLines.Add($visible) | Out-Null
+      }
+      $fence = $openingFence.Groups["Fence"].Value
+      $fenceCharacter = $fence.Substring(0, 1)
+      $fenceLength = $fence.Length
+      $inFence = $true
+      continue
+    }
+
+    # 同名H2は文書全体で一意とし、comment / fence外のduplicateもfail closedにする。
+    if ($visible -cmatch $headingPattern) {
+      $headingMatchCount++
+      $collectSection = $true
+      continue
+    }
+    if ($collectSection -and $visible -match '^ {0,3}#{1,2}[ \t]+') {
+      $collectSection = $false
+      continue
+    }
+    if ($collectSection) {
+      $sectionLines.Add($visible) | Out-Null
+    }
+  }
+
+  return [pscustomobject]@{
+    MatchCount = $headingMatchCount
+    Lines = $sectionLines.ToArray()
+  }
+}
+
+function Get-MarkdownFencedBlocks {
+  param([string[]]$Lines)
+
+  $blocks = New-Object System.Collections.Generic.List[object]
+  $blockLines = New-Object System.Collections.Generic.List[string]
+  $inFence = $false
+  $fenceCharacter = ""
+  $fenceLength = 0
+  $fenceInfo = ""
+
+  foreach ($line in $Lines) {
+    if (-not $inFence) {
+      $openingFence = [regex]::Match(
+        $line,
+        '^ {0,3}(?<Fence>`{3,}|~{3,})(?<Info>.*)$'
+      )
+      if (-not $openingFence.Success) {
+        continue
+      }
+      $fence = $openingFence.Groups["Fence"].Value
+      $fenceCharacter = $fence.Substring(0, 1)
+      $fenceLength = $fence.Length
+      $fenceInfo = $openingFence.Groups["Info"].Value.Trim()
+      $blockLines = New-Object System.Collections.Generic.List[string]
+      $inFence = $true
+      continue
+    }
+
+    $closingPattern = (
+      '^ {0,3}' +
+      [regex]::Escape($fenceCharacter) +
+      "{$fenceLength,}[ \t]*$"
+    )
+    if ($line -match $closingPattern) {
+      $blocks.Add([pscustomobject]@{
+        Info = $fenceInfo
+        Content = ($blockLines.ToArray() -join "`n")
+        IsClosed = $true
+      }) | Out-Null
+      $inFence = $false
+      $fenceCharacter = ""
+      $fenceLength = 0
+      $fenceInfo = ""
+      continue
+    }
+    $blockLines.Add($line) | Out-Null
+  }
+
+  # 閉じ忘れを無視せず、明示的なinvalid blockとして後段へ渡す。
+  if ($inFence) {
+    $blocks.Add([pscustomobject]@{
+      Info = $fenceInfo
+      Content = ($blockLines.ToArray() -join "`n")
+      IsClosed = $false
+    }) | Out-Null
+  }
+
+  return $blocks.ToArray()
+}
+
+function Get-JavaScriptLexicalMap {
+  param([string]$Content)
+
+  # 公開exampleは小さい固定snippetである。異常に巨大な入力は正規表現評価へ渡さない。
+  $maximumContractCodeLength = 200000
+  if ($Content.Length -gt $maximumContractCodeLength) {
+    return [pscustomobject]@{
+      IsValid = $false
+      Error = "JavaScript evidence block exceeds the lexical scan limit."
+      Mask = ""
+    }
+  }
+
+  $mask = New-Object System.Text.StringBuilder($Content.Length)
+  $state = "code"
+  $escaped = $false
+  $lexicalError = ""
+
+  for ($index = 0; $index -lt $Content.Length; $index++) {
+    $character = $Content[$index]
+    $nextCharacter = if ($index + 1 -lt $Content.Length) {
+      $Content[$index + 1]
+    } else {
+      [char]0
+    }
+
+    if ($state -ceq "code") {
+      # comment開始記号自体も空白化し、内部tokenをactive codeとして数えない。
+      if ($character -eq "/" -and $nextCharacter -eq "/") {
+        [void]$mask.Append("  ")
+        $index++
+        $state = "line-comment"
+        continue
+      }
+      if ($character -eq "/" -and $nextCharacter -eq "*") {
+        [void]$mask.Append("  ")
+        $index++
+        $state = "block-comment"
+        continue
+      }
+      if ($character -eq "'") {
+        [void]$mask.Append(" ")
+        $state = "single-quoted-string"
+        $escaped = $false
+        continue
+      }
+      if ($character -eq '"') {
+        [void]$mask.Append(" ")
+        $state = "double-quoted-string"
+        $escaped = $false
+        continue
+      }
+      if ($character -eq [char]96) {
+        [void]$mask.Append(" ")
+        $state = "template-literal"
+        $escaped = $false
+        continue
+      }
+      [void]$mask.Append($character)
+      continue
+    }
+
+    if ($state -ceq "line-comment") {
+      if ($character -eq "`r" -or $character -eq "`n") {
+        [void]$mask.Append($character)
+        $state = "code"
+      } else {
+        [void]$mask.Append(" ")
+      }
+      continue
+    }
+
+    if ($state -ceq "block-comment") {
+      if ($character -eq "*" -and $nextCharacter -eq "/") {
+        [void]$mask.Append("  ")
+        $index++
+        $state = "code"
+      } elseif ($character -eq "`r" -or $character -eq "`n") {
+        [void]$mask.Append($character)
+      } else {
+        [void]$mask.Append(" ")
+      }
+      continue
+    }
+
+    # quoted string / template literalは同じ長さの空白へ置換し、offset対応を保つ。
+    if ($escaped) {
+      if ($character -eq "`r" -or $character -eq "`n") {
+        [void]$mask.Append($character)
+      } else {
+        [void]$mask.Append(" ")
+      }
+      $escaped = $false
+      continue
+    }
+    if ($character -eq "\") {
+      [void]$mask.Append(" ")
+      $escaped = $true
+      continue
+    }
+    if (
+      $state -ceq "template-literal" -and
+      $character -eq '$' -and
+      $nextCharacter -eq '{'
+    ) {
+      # `${...}` はliteral本文ではなく実行式になる。部分parseせず、境界をfail closedにする。
+      [void]$mask.Append(" ")
+      if ([string]::IsNullOrEmpty($lexicalError)) {
+        $lexicalError = "JavaScript template interpolation is not allowed."
+      }
+      continue
+    }
+
+    $closingCharacter = switch ($state) {
+      "single-quoted-string" { "'" }
+      "double-quoted-string" { '"' }
+      "template-literal" { [char]96 }
+    }
+    if ($character -eq $closingCharacter) {
+      [void]$mask.Append(" ")
+      $state = "code"
+      continue
+    }
+    if ($character -eq "`r" -or $character -eq "`n") {
+      [void]$mask.Append($character)
+      if (
+        $state -ne "template-literal" -and
+        [string]::IsNullOrEmpty($lexicalError)
+      ) {
+        $lexicalError = "Quoted JavaScript string crosses an unescaped line boundary."
+      }
+    } else {
+      [void]$mask.Append(" ")
+    }
+  }
+
+  if (
+    $state -ne "code" -and
+    $state -ne "line-comment" -and
+    [string]::IsNullOrEmpty($lexicalError)
+  ) {
+    $lexicalError = "JavaScript comment or string is not terminated."
+  }
+
+  return [pscustomobject]@{
+    IsValid = [string]::IsNullOrEmpty($lexicalError)
+    Error = $lexicalError
+    Mask = $mask.ToString()
+  }
+}
+
+function Get-JavaScriptLineAtOffset {
+  param(
+    [string]$Content,
+    [int]$Offset
+  )
+
+  if ($Offset -lt 0 -or $Offset -ge $Content.Length) {
+    return ""
+  }
+  $lineStart = if ($Offset -eq 0) {
+    0
+  } else {
+    $Content.LastIndexOf("`n", $Offset - 1) + 1
+  }
+  $lineEnd = $Content.IndexOf("`n", $Offset)
+  if ($lineEnd -lt 0) {
+    $lineEnd = $Content.Length
+  }
+  return $Content.Substring($lineStart, $lineEnd - $lineStart).TrimEnd([char]13)
+}
+
+function Get-SkillReadinessContractErrors {
+  param([string]$SkillText)
+
+  $contractErrors = New-Object System.Collections.Generic.List[string]
+  $section = Get-MarkdownH2RawSection `
+    -Content $SkillText `
+    -Heading "Suggested Playwright Evidence"
+  if ($section.MatchCount -ne 1) {
+    $contractErrors.Add(
+      "[skill-readiness-section] Suggested Playwright Evidence H2 must appear exactly once."
+    ) | Out-Null
+    return $contractErrors.ToArray()
+  }
+
+  # 対象sectionの別fenceへ正解を置くdecoyを防ぐため、単一JavaScript blockへ閉じる。
+  $blocks = @(Get-MarkdownFencedBlocks -Lines $section.Lines)
+  if (
+    $blocks.Count -ne 1 -or
+    $blocks[0].Info -cne "javascript" -or
+    -not $blocks[0].IsClosed
+  ) {
+    $contractErrors.Add(
+      "[skill-readiness-fence] Suggested Playwright Evidence must contain one closed javascript fence."
+    ) | Out-Null
+    return $contractErrors.ToArray()
+  }
+
+  $code = $blocks[0].Content
+  $lexicalMap = Get-JavaScriptLexicalMap -Content $code
+  if (-not $lexicalMap.IsValid) {
+    $contractErrors.Add(
+      "[skill-readiness-code] Active JavaScript evidence is lexically invalid: $($lexicalMap.Error)"
+    ) | Out-Null
+    return $contractErrors.ToArray()
+  }
+
+  # tokenのactive位置を先に確定し、raw lineのquoted option値はその位置からだけ評価する。
+  $locatorTokenMatches = [regex]::Matches(
+    $lexicalMap.Mask,
+    '(?m)^[ \t]*const[ \t]+readyLocator\b'
+  )
+  $navigationTokenMatches = [regex]::Matches(
+    $lexicalMap.Mask,
+    '\bpage\.goto\b'
+  )
+  $waitTokenMatches = [regex]::Matches(
+    $lexicalMap.Mask,
+    '\breadyLocator\.waitFor\b'
+  )
+  $locatorLine = if ($locatorTokenMatches.Count -eq 1) {
+    Get-JavaScriptLineAtOffset `
+      -Content $code `
+      -Offset $locatorTokenMatches[0].Index
+  } else {
+    ""
+  }
+  $navigationLine = if ($navigationTokenMatches.Count -eq 1) {
+    Get-JavaScriptLineAtOffset `
+      -Content $code `
+      -Offset $navigationTokenMatches[0].Index
+  } else {
+    ""
+  }
+  $waitLine = if ($waitTokenMatches.Count -eq 1) {
+    Get-JavaScriptLineAtOffset `
+      -Content $code `
+      -Offset $waitTokenMatches[0].Index
+  } else {
+    ""
+  }
+  $locatorPattern = (
+    '^[ \t]*const[ \t]+readyLocator[ \t]*=[ \t]*' +
+    'page\.getByRole\([ \t]*"main"[ \t]*\)[ \t]*;[ \t]*$'
+  )
+  $navigationPattern = (
+    '^[ \t]*await[ \t]+page\.goto\([ \t]*targetUrl[ \t]*,[ \t]*' +
+    '\{[ \t]*waitUntil:[ \t]*"load"[ \t]*,[ \t]*timeout:[ \t]*15000[ \t]*' +
+    '\}[ \t]*\)[ \t]*;[ \t]*$'
+  )
+  $waitPattern = (
+    '^[ \t]*await[ \t]+readyLocator\.waitFor\([ \t]*' +
+    '\{[ \t]*state:[ \t]*"visible"[ \t]*,[ \t]*timeout:[ \t]*10000[ \t]*' +
+    '\}[ \t]*\)[ \t]*;[ \t]*$'
+  )
+  $locatorIsExact = (
+    $locatorTokenMatches.Count -eq 1 -and
+    $locatorLine -cmatch $locatorPattern
+  )
+  $navigationIsExact = (
+    $navigationTokenMatches.Count -eq 1 -and
+    $navigationLine -cmatch $navigationPattern
+  )
+  $waitIsExact = (
+    $waitTokenMatches.Count -eq 1 -and
+    $waitLine -cmatch $waitPattern
+  )
+
+  if (
+    $navigationTokenMatches.Count -eq 1 -and
+    $navigationLine -match '(?i)"networkidle"'
+  ) {
+    $contractErrors.Add(
+      "[skill-readiness-networkidle] Active Playwright evidence code must not use networkidle."
+    ) | Out-Null
+  }
+  if (-not $locatorIsExact) {
+    $contractErrors.Add(
+      "[skill-readiness-locator] Exact route/state readiness locator must appear once."
+    ) | Out-Null
+  }
+  if (-not $navigationIsExact) {
+    $contractErrors.Add(
+      "[skill-readiness-navigation] Exact bounded load navigation must appear once."
+    ) | Out-Null
+  }
+  if (-not $waitIsExact) {
+    $contractErrors.Add(
+      "[skill-readiness-wait] Exact bounded visible locator wait must appear once."
+    ) | Out-Null
+  }
+
+  # 各statementが正しいだけでなく、locator準備→navigation→UI readyの順序も固定する。
+  if (
+    $locatorIsExact -and
+    $navigationIsExact -and
+    $waitIsExact -and
+    -not (
+      $locatorTokenMatches[0].Index -lt $navigationTokenMatches[0].Index -and
+      $navigationTokenMatches[0].Index -lt $waitTokenMatches[0].Index
+    )
+  ) {
+    $contractErrors.Add(
+      "[skill-readiness-order] Locator, navigation, and readiness wait must remain ordered."
+    ) | Out-Null
+  }
+
+  return $contractErrors.ToArray()
+}
+
+function Assert-SkillReadinessContractMutations {
+  param([string]$SkillText)
+
+  $baselineErrors = @(Get-SkillReadinessContractErrors -SkillText $SkillText)
+  if ($baselineErrors.Count -gt 0) {
+    Add-Error "[skill-readiness-mutation] Baseline contract is invalid; mutation self-test skipped."
+    return
+  }
+
+  $expectedMutationCount = 28
+  $gotoLine = '  await page.goto(targetUrl, { waitUntil: "load", timeout: 15000 });'
+  $waitLine = '  await readyLocator.waitFor({ state: "visible", timeout: 10000 });'
+  $networkidleSkill = $SkillText.Replace(
+    'waitUntil: "load"',
+    'waitUntil: "networkidle"'
+  )
+  $commentDecoySkill = $networkidleSkill.Replace(
+    $gotoLine.Replace('"load"', '"networkidle"'),
+    ('// ' + $gotoLine + "`n" + $gotoLine.Replace('"load"', '"networkidle"'))
+  )
+  $blockCommentDecoySkill = $networkidleSkill.Replace(
+    $gotoLine.Replace('"load"', '"networkidle"'),
+    (
+      '/* ' +
+      $gotoLine +
+      " */`n" +
+      $gotoLine.Replace('"load"', '"networkidle"')
+    )
+  )
+  $evidencePrefix = (
+    'Adapt this pattern to the project. Keep all waits bounded.' +
+    "`n`n" +
+    '```javascript'
+  )
+  $otherFenceSkill = $networkidleSkill.Replace(
+    $evidencePrefix,
+    (
+      'Adapt this pattern to the project. Keep all waits bounded.' +
+      "`n`n" +
+      '```javascript' +
+      "`n$gotoLine`n" +
+      '```' +
+      "`n`n" +
+      '```javascript'
+    )
+  )
+  $reversedOrderSkill = $SkillText.Replace(
+    ($gotoLine + "`n" + $waitLine),
+    ($waitLine + "`n" + $gotoLine)
+  )
+  $closingFenceNeedle = '}' + "`n" + '```' + "`n"
+  $unterminatedFenceSkill = $SkillText.Replace(
+    $closingFenceNeedle,
+    ('}' + "`n")
+  )
+  # HTML commentをdelimiterの間へ挟み、除去後の連結で構造を合成できないことを固定する。
+  $commentSplitHeadingSkill = $SkillText.Replace(
+    '## Suggested Playwright Evidence',
+    '#<!-- heading split --># Suggested Playwright Evidence'
+  )
+  $commentSplitFenceSkill = $SkillText.Replace(
+    '```javascript',
+    (
+      [char]96 +
+      '<!-- fence split -->' +
+      [char]96 +
+      [char]96 +
+      'javascript'
+    )
+  )
+  # indent付きの別H2は対象sectionを閉じ、その後のfenceを対象blockへ混入させない。
+  $indentedNonTargetBoundarySkill = $SkillText.Replace(
+    '## Synthetic Examples',
+    (
+      ' ## Synthetic Boundary' +
+      "`n`n" +
+      '```javascript' +
+      "`n" +
+      'page.goto("synthetic-only");' +
+      "`n" +
+      '```' +
+      "`n`n" +
+      '## Synthetic Examples'
+    )
+  )
+  # 正解行を非実行領域へ移すdecoyを作り、tokenの見た目だけでは合格しないことを固定する。
+  $templateLiteralNavigationDecoySkill = $SkillText.Replace(
+    $gotoLine,
+    (
+      '  const navigationDecoy = ' +
+      [char]96 +
+      "`n" +
+      $gotoLine +
+      "`n" +
+      [char]96 +
+      ';'
+    )
+  )
+  $singleQuotedNavigationDecoySkill = $SkillText.Replace(
+    $gotoLine,
+    "  const navigationDecoy = 'page.goto(targetUrl)';"
+  )
+  $doubleQuotedNavigationDecoySkill = $SkillText.Replace(
+    $gotoLine,
+    '  const navigationDecoy = "page.goto(targetUrl)";'
+  )
+  # 未終端literalは後続行を誤ってactive codeへ戻さず、lexical errorとしてfail closedにする。
+  $unterminatedSingleQuotedStringSkill = $SkillText.Replace(
+    $gotoLine,
+    "  const navigationDecoy = 'page.goto(targetUrl);"
+  )
+  $unterminatedDoubleQuotedStringSkill = $SkillText.Replace(
+    $gotoLine,
+    '  const navigationDecoy = "page.goto(targetUrl);'
+  )
+  $unterminatedTemplateLiteralSkill = $SkillText.Replace(
+    $gotoLine,
+    (
+      '  const navigationDecoy = ' +
+      [char]96 +
+      "`n" +
+      $gotoLine
+    )
+  )
+  # template interpolationは式を実行するため、内容にかかわらずfail closedにする。
+  $templateInterpolationNavigationSkill = $SkillText.Replace(
+    $gotoLine,
+    (
+      '  const interpolationDecoy = ' +
+      [char]96 +
+      'ignored ${page.goto(targetUrl)}' +
+      [char]96 +
+      ';' +
+      "`n" +
+      $gotoLine
+    )
+  )
+  $benignTemplateInterpolationSkill = $SkillText.Replace(
+    $gotoLine,
+    (
+      '  const benignInterpolation = ' +
+      [char]96 +
+      'target=${targetUrl}' +
+      [char]96 +
+      ';' +
+      "`n" +
+      $gotoLine
+    )
+  )
+  # `\${` はinterpolation開始ではない。literal内tokenをactive navigationへ数えない。
+  $escapedTemplateInterpolationDecoySkill = $SkillText.Replace(
+    $gotoLine,
+    (
+      '  const navigationDecoy = ' +
+      [char]96 +
+      'literal \${page.goto(targetUrl)}' +
+      [char]96 +
+      ';'
+    )
+  )
+  $mutationCases = @(
+    [pscustomobject]@{
+      Name = "networkidle-navigation"
+      Expected = "[skill-readiness-networkidle]"
+      SkillText = $networkidleSkill
+    },
+    [pscustomobject]@{
+      Name = "missing-navigation-timeout"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $SkillText.Replace(', timeout: 15000 });', ' });')
+    },
+    [pscustomobject]@{
+      Name = "missing-readiness-wait"
+      Expected = "[skill-readiness-wait]"
+      SkillText = $SkillText.Replace(($waitLine + "`n"), "")
+    },
+    [pscustomobject]@{
+      Name = "missing-readiness-timeout"
+      Expected = "[skill-readiness-wait]"
+      SkillText = $SkillText.Replace(', timeout: 10000 });', ' });')
+    },
+    [pscustomobject]@{
+      Name = "reversed-navigation-and-wait"
+      Expected = "[skill-readiness-order]"
+      SkillText = $reversedOrderSkill
+    },
+    [pscustomobject]@{
+      Name = "line-comment-navigation-decoy"
+      Expected = "[skill-readiness-networkidle]"
+      SkillText = $commentDecoySkill
+    },
+    [pscustomobject]@{
+      Name = "block-comment-navigation-decoy"
+      Expected = "[skill-readiness-networkidle]"
+      SkillText = $blockCommentDecoySkill
+    },
+    [pscustomobject]@{
+      Name = "other-fence-navigation-decoy"
+      Expected = "[skill-readiness-fence]"
+      SkillText = $otherFenceSkill
+    },
+    [pscustomobject]@{
+      Name = "wrong-readiness-locator"
+      Expected = "[skill-readiness-locator]"
+      SkillText = $SkillText.Replace(
+        'page.getByRole("main")',
+        'page.locator("body")'
+      )
+    },
+    [pscustomobject]@{
+      Name = "duplicate-navigation"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $SkillText.Replace(
+        $gotoLine,
+        ($gotoLine + "`n" + $gotoLine)
+      )
+    },
+    [pscustomobject]@{
+      Name = "unterminated-javascript-fence"
+      Expected = "[skill-readiness-fence]"
+      SkillText = $unterminatedFenceSkill
+    },
+    [pscustomobject]@{
+      Name = "duplicate-readiness-heading"
+      Expected = "[skill-readiness-section]"
+      SkillText = ($SkillText + "`n## Suggested Playwright Evidence`n")
+    },
+    [pscustomobject]@{
+      Name = "template-literal-navigation-decoy"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $templateLiteralNavigationDecoySkill
+    },
+    [pscustomobject]@{
+      Name = "single-quoted-navigation-decoy"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $singleQuotedNavigationDecoySkill
+    },
+    [pscustomobject]@{
+      Name = "double-quoted-navigation-decoy"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $doubleQuotedNavigationDecoySkill
+    },
+    [pscustomobject]@{
+      Name = "unterminated-single-quoted-string"
+      Expected = "[skill-readiness-code]"
+      SkillText = $unterminatedSingleQuotedStringSkill
+    },
+    [pscustomobject]@{
+      Name = "unterminated-double-quoted-string"
+      Expected = "[skill-readiness-code]"
+      SkillText = $unterminatedDoubleQuotedStringSkill
+    },
+    [pscustomobject]@{
+      Name = "unterminated-template-literal"
+      Expected = "[skill-readiness-code]"
+      SkillText = $unterminatedTemplateLiteralSkill
+    },
+    [pscustomobject]@{
+      Name = "locator-role-case-drift"
+      Expected = "[skill-readiness-locator]"
+      SkillText = $SkillText.Replace(
+        'page.getByRole("main")',
+        'page.getByRole("Main")'
+      )
+    },
+    [pscustomobject]@{
+      Name = "navigation-option-case-drift"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $SkillText.Replace(
+        'waitUntil: "load"',
+        'waituntil: "load"'
+      )
+    },
+    [pscustomobject]@{
+      Name = "readiness-option-case-drift"
+      Expected = "[skill-readiness-wait]"
+      SkillText = $SkillText.Replace(
+        'state: "visible"',
+        'State: "visible"'
+      )
+    },
+    [pscustomobject]@{
+      Name = "template-interpolation-navigation"
+      Expected = "[skill-readiness-code]"
+      SkillText = $templateInterpolationNavigationSkill
+    },
+    [pscustomobject]@{
+      Name = "benign-template-interpolation"
+      Expected = "[skill-readiness-code]"
+      SkillText = $benignTemplateInterpolationSkill
+    },
+    [pscustomobject]@{
+      Name = "escaped-template-interpolation-decoy"
+      Expected = "[skill-readiness-navigation]"
+      SkillText = $escapedTemplateInterpolationDecoySkill
+    },
+    [pscustomobject]@{
+      Name = "readiness-heading-case-drift"
+      Expected = "[skill-readiness-section]"
+      SkillText = $SkillText.Replace(
+        '## Suggested Playwright Evidence',
+        '## suggested playwright evidence'
+      )
+    },
+    [pscustomobject]@{
+      Name = "html-comment-split-readiness-heading"
+      Expected = "[skill-readiness-section]"
+      SkillText = $commentSplitHeadingSkill
+    },
+    [pscustomobject]@{
+      Name = "html-comment-split-javascript-fence"
+      Expected = "[skill-readiness-fence]"
+      SkillText = $commentSplitFenceSkill
+    },
+    [pscustomobject]@{
+      Name = "indented-duplicate-readiness-heading"
+      Expected = "[skill-readiness-section]"
+      SkillText = ($SkillText + "`n ## Suggested Playwright Evidence`n")
+    }
+  )
+
+  if ($mutationCases.Count -ne $expectedMutationCount) {
+    Add-Error "[skill-readiness-mutation] Mutation fixture count changed."
+    return
+  }
+  foreach ($mutationCase in $mutationCases) {
+    if ($mutationCase.SkillText -ceq $SkillText) {
+      Add-Error (
+        "[skill-readiness-mutation] Mutation fixture did not change input: " +
+        $mutationCase.Name
+      )
+      continue
+    }
+    $mutationErrors = @(
+      Get-SkillReadinessContractErrors -SkillText $mutationCase.SkillText
+    )
+    $matched = @(
+      $mutationErrors |
+        Where-Object { $_.Contains($mutationCase.Expected) }
+    )
+    if ($matched.Count -eq 0) {
+      Add-Error (
+        "[skill-readiness-mutation] Mutation escaped contract: " +
+        $mutationCase.Name
+      )
+    }
+  }
+
+  if ($indentedNonTargetBoundarySkill -ceq $SkillText) {
+    Add-Error "[skill-readiness-mutation] Indented non-target H2 positive fixture did not change input."
+  } else {
+    $indentedBoundaryErrors = @(
+      Get-SkillReadinessContractErrors -SkillText $indentedNonTargetBoundarySkill
+    )
+    if ($indentedBoundaryErrors.Count -gt 0) {
+      Add-Error (
+        "[skill-readiness-mutation] Valid indented non-target H2 boundary was rejected."
+      )
+    }
+  }
+
+  Write-Output (
+    "Skill readiness contract self-test passed " +
+    "($($mutationCases.Count) hostile mutations rejected)."
+  )
+}
+
 function Get-PublicExampleEvidenceTable {
   param(
     [string]$Content,
@@ -1425,6 +2273,17 @@ foreach ($scriptPath in @(
   Assert-FileHasUtf8Bom -RelativePath $scriptPath
 }
 
+$skillReadinessErrors = @(
+  Get-SkillReadinessContractErrors -SkillText (Get-RepoText "SKILL.md")
+)
+foreach ($skillReadinessError in $skillReadinessErrors) {
+  Add-Error $skillReadinessError
+}
+if ($skillReadinessErrors.Count -eq 0) {
+  Assert-SkillReadinessContractMutations `
+    -SkillText (Get-RepoText "SKILL.md")
+}
+
 $publicExamplePaths = @(
   Get-ChildItem -LiteralPath (Get-RepoPath "examples") -Recurse -File |
     ForEach-Object {
@@ -1770,12 +2629,51 @@ Assert-FileContains `
   -Description "remaining-budget check immediately before process start"
 Assert-FileContains `
   -RelativePath "tests/scan-private-markers.Tests.ps1" `
-  -Pattern '\$timeoutMilliseconds = if \(\$runtimeIsWindows\) \{ 300 \} else \{ 4000 \}(?s:.{0,300})\$timeoutElapsedLimitMilliseconds\s*=(?s:.{0,100})if \(\$runtimeIsWindows\) \{ 900 \} else \{ 7000 \}' `
-  -Description "platform-bounded timeout and process-tree sentinel regression"
+  -Pattern 'function Test-PrivateMarkerMillisecondWaitContract(?s:.{0,5000})\$boundedTypeSources(?s:.{0,5000})\$expectedRemainingFunction(?s:.{0,4000})\$expectedNativeWaitRegion(?s:.{0,5000})\$allNativeWaitCalls\.Count -ne 1(?s:.{0,3000})\$lastRemainingAssignment(?s:.{0,1500})\$actualNativeWaitRegion' `
+  -Description "host-independent millisecond wait contract regression"
 Assert-FileContains `
   -RelativePath "tests/scan-private-markers.Tests.ps1" `
-  -Pattern '\$timeoutGrandchildStarted(?s:.{0,300})\$timeoutSurvivalRelease(?s:.{0,2500})__GRANDCHILD_STARTED__(?s:.{0,800})__SURVIVAL_RELEASE__(?s:.{0,800})__SURVIVAL_SENTINEL__' `
-  -Description "POSIX released-grandchild process-tree oracle"
+  -Pattern '\$timeoutMilliseconds\s*=\s*4000(?s:.{0,300})\$timeoutElapsedLimitMilliseconds\s*=(?s:.{0,100})if \(\$runtimeIsWindows\) \{ 10000 \} else \{ 15000 \}(?s:.{0,800})\$releaseWait\.ElapsedMilliseconds -lt 25000(?s:.{0,1000})__GRANDCHILD_STARTED__(?s:.{0,800})__SURVIVAL_RELEASE__(?s:.{0,800})__SURVIVAL_SENTINEL__' `
+  -Description "platform-bounded released-grandchild process-tree regression"
+Assert-FileContains `
+  -RelativePath "scripts/private-marker-process.ps1" `
+  -Pattern 'public bool WaitForExit\(int milliseconds\)(?s:.{0,160})return WaitForSingleObject\(processHandle, \(uint\)milliseconds\)' `
+  -Description "direct millisecond Win32 wait implementation"
+Assert-FileContains `
+  -RelativePath "tests/scan-private-markers.Tests.ps1" `
+  -Pattern '\$preLaunchElapsedLimitMilliseconds\s*=\s*5000' `
+  -Description "prelaunch finite hang guard"
+foreach ($boundedProcessDiagnosticLabel in @(
+    'timeout/millisecond-structure-contract',
+    'timeout/millisecond-caller-rounding-mutation',
+    'timeout/millisecond-helper-rounding-mutation',
+    'timeout/millisecond-comment-decoy-mutation',
+    'timeout/millisecond-string-decoy-mutation',
+    'timeout/millisecond-csharp-comment-decoy-mutation',
+    'timeout/millisecond-csharp-string-decoy-mutation',
+    'timeout/millisecond-extra-wait-mutation',
+    'timeout/timed-out',
+    'timeout/containment-established',
+    'timeout/tree-stopped',
+    'timeout/streams-drained',
+    'timeout/elapsed-hang-guard',
+    'timeout/target-started',
+    'timeout/grandchild-started',
+    'timeout/sentinel-not-written',
+    'prelaunch/timed-out',
+    'prelaunch/containment-not-established',
+    'prelaunch/tree-stopped',
+    'prelaunch/streams-drained',
+    'prelaunch/elapsed-hang-guard',
+    'prelaunch/target-not-started'
+  )) {
+  Assert-FileContains `
+    -RelativePath "tests/scan-private-markers.Tests.ps1" `
+    -Pattern ('(?-i:' +
+      [regex]::Escape("[$boundedProcessDiagnosticLabel]") +
+      ')') `
+    -Description "condition-specific bounded process diagnostic: $boundedProcessDiagnosticLabel"
+}
 Assert-FileContains `
   -RelativePath "tests/scan-private-markers.Tests.ps1" `
   -Pattern 'ForcePreLaunchDelayMilliseconds 250(?s:.*?)ForcePosixGateDelayMilliseconds 250' `

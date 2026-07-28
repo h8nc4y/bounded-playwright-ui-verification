@@ -22,12 +22,14 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
    （D1〜D4 / O1〜O3）
 5. `README.md` / `SKILL.md` — repo 概要とスキル本体
 
-## 現状サマリ（2026-07-28 時点）
+## 現状サマリ（2026-07-29 時点）
 
 - `main` がリリース可能・最新で、唯一の通常作業対象ブランチ。タグ `v0.1.0` は `main` 上。
 - ブランチ保護あり。必須ステータスチェック「Validate repository」（CI）の通過が必須。
   変更は PR → CI 緑 → セルフマージが基本（`AGENTS.md` §9）。
-- T-001〜T-017 / T-021 / T-023 / T-025〜T-028 は完了。T-026ではscannerを
+- T-001〜T-017 / T-021 / T-023 / T-025〜T-029 は完了。T-030は挙動検証と
+  独立reviewを完了し、PR #29のCI remediation中。T-031は同PRの初回CIで判明した
+  既存scanner process回帰のhost timing依存を修正中。T-026ではscannerを
   bounded process、hermetic Git、index＋全working tree（untracked textを含む）、
   scan-wide deadline、atomic redacted outputのfail-closed境界へ更新した。first-call ASTは
   target shadow、Alias/Function provider代入、module-qualified bootstrap/provenance、
@@ -85,14 +87,37 @@ Codex-style skill。主成果物は `SKILL.md` で、UI 検証を実行するコ
   11ファイル、T-021完了、Debianコンテナ確認済み・macOS/native Linux host未確認、
   2026-07-28のGitHub実状態へ同期した。D1〜D4 / O1〜O3、verdict、applicability、
   scanner走査対象、bounded契約、Non-Goalsの意味は変更していない。
+- T-030は、T-025で修正した`SKILL.md`のPlaywright推奨例を`assert-oss-ready.ps1`が
+  検査しておらず、配布先copyが旧`networkidle`例のままdriftしている事実から着手した。
+  repo内の推奨例だけを順序付きbounded readiness契約とhostile mutationで回帰固定する。
+  active tokenはline / block comment、single / double quoted string、template literalの外側だけから
+  確定し、未終端comment / string / templateとunescaped template interpolationは
+  fail closedにする。escaped `\${`はliteralとして扱い、H2名とcodeのexact patternは
+  大小文字を区別する。
+  HTML commentは削除せず同じ長さの空白へmaskし、前後のdelimiter断片を連結しない。
+  CommonMarkのATX heading契約に合わせ、H1 / H2は0〜3個の先頭空白を構造として認識する。
+  indent付きの別H2が対象sectionを閉じるpositive fixtureもself-testへ含める。
+  推奨例に既存のbenign interpolationが1行あったため、出力を変えない文字列連結へ置換した。
+  Windows PowerShell 5.1とPowerShell 7のfocused self-testで28 hostile mutationの拒否を
+  実測した。
+  配布先copyはこのtaskで編集せず、repo merge後にstatic/no-LLM scan、manual diff、
+  hash照合を行う別境界とする。
+- T-031はPR #29初回CI run `30373424494`で、既存scanner self-testのtimeout aggregateと
+  prelaunch aggregateだけが失敗したことから着手した。PR差分はscanner source/testを
+  変更しておらず、直前mainを含む過去11 runは成功していたため、単純rerunせずhost負荷に
+  敏感なwall-clock条件を分解した。sub-second精度はWin32 waitへのmillisecond直渡しを
+  構造固定し、runtime/tree cleanupはtarget・grandchild開始後のrelease sentinel、
+  prelaunchはtarget非起動で判定する。elapsedは有限hang guardだけに限定し、各条件を
+  固定labelへ分離する。production scannerの挙動と既定timeoutは変更しない。
 
 ## 次の一手
 
 1. **人間（最優先）**: `docs/requirements-redefinition-2026-07.md` §5 の D1〜D4 / O1〜O3 と、
    private marker literal の扱いを裁定する。T-024 の tracked-only 走査も §14④ の承認待ち。
-2. **Codex（回答待ちに自走可）**: 新たな具体的coverage gap、失敗、または安全な
-   maintenance候補が確認できた場合だけ次のtaskとして台帳化する。現時点で未完了の
-   既知taskはすべて上記の人間gate対象。
+2. **Codex（進行中）**: T-031を両PowerShell hostのtargeted / full gateで検証し、
+   独立review後にPR #29へpushする。必須CIが緑になった後だけmergeする。
+3. **Codex（T-030 merge後の別境界）**: 配布先copyを更新する前にSkillSpector wrapperの
+   static/no-LLM scan、manual diff、hash照合、独立CLEARを完了する。旧copyはそれまで編集しない。
 
 ## 検証コマンド（check:all、CI と同形）
 
@@ -111,8 +136,37 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   コミット後に実行する。
 - package manager manifest は無く、依存インストールは不要。
 
-### 最新の検証結果（2026-07-28、本ファイル更新時）
+### 最新の検証結果（2026-07-29、本ファイル更新時）
 
+- T-031のREDはPR #29初回CI run `30373424494`で、既存scanner self-testのtimeout /
+  prelaunch aggregate 2件だけが失敗した実測。v1のtargeted PowerShell 7 scanner
+  regressionは299.2秒、OSS readinessは60.4秒でpass。CI同形4ステップはWindows
+  PowerShell 5.1で33.4 / 184.0 / 89.1 / 1.7秒、PowerShell 7で26.0 / 274.2 /
+  50.0 / 1.5秒ですべてpassした。readinessはPlaywright 28 mutation、公開example
+  11件 / report schema 7件 / 17 mutation、server-runbook 93 fixtureを拒否した。
+  scanner / process残留は開始前・終了後とも0。固定failure labelは0件だった。
+  ただしv1 freezeの独立reviewで、C# methodのPowerShell comment decoyと追加native waitを
+  見逃すP2=2を確認。v2はAdd-Typeへ実際に渡るtype sourceだけを検証し、全
+  `nativeChild.WaitForExit` callを引数にかかわらず1件へ閉じた。
+  v2 targeted PowerShell 7 scanner regressionは273.6秒、OSS readinessは48.2秒でpass。
+  CI同形4ステップはWindows PowerShell 5.1で29.0 / 183.6 / 69.2 / 1.2秒、
+  PowerShell 7で19.3 / 251.2 / 47.1 / 1.7秒ですべてpassした。millisecond構造の
+  caller / helper / full-region / C# decoy / extra wait計7 mutationを拒否し、
+  fixed failure labelは0件、終了後のscanner / process残留も0件だった。
+- T-030着手前のWindows PowerShell 5.1 baselineはcheck:all 4ステップがpass。
+  REDでは`SKILL.md`の実行例を旧`networkidle`へ戻しても現行`assert-oss-ready.ps1`が
+  passし、`waitUntil`、timeout、locator待機を検査していないことを実測した。追加した
+  contractのfocused self-testはWindows PowerShell 5.1 / PowerShell 7で、
+  timeout / wait欠落、順序逆転、comment / quoted string / template literal / 別fence decoy、
+  未終端lexical region、unescaped / escaped template interpolation、code / H2の
+  大小文字drift、HTML commentによるdelimiter分断、indent付きduplicate H2など
+  28 mutationをすべて拒否した。
+  配布先copyのhashはrepo内`SKILL.md`と不一致で旧`networkidle`例を
+  保持しているが、配布先copyは未変更。最終check:all 4ステップはWindows PowerShell 5.1 /
+  PowerShell 7の両runtimeでpass。公開exampleは11件 / report schemaは7件 /
+  hostile mutationは17件、server-runbook contractはhostile fixture 93件を拒否した。
+  PowerShell 7のstderrは0、両runtimeのscanner / runner親子process残留は0。
+  この実測値を反映したdocs-only差分を含むcombined treeをmerge前のexact check対象とする。
 - T-029の文書同期後、Windows PowerShell 5.1でcheck:all 4ステップがpass。
   OSS readinessは公開example 11件 / report schema 7件 / hostile mutation 17件、
   server-runbook contractはhostile fixture 93件を拒否した。scanner要件・example・
@@ -181,6 +235,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-whitespace.ps1
   browser evidence を各案件の実測に置き換える。
 - T-028はreport契約の合成exampleとrepository readinessだけを検証した。実ブラウザ / 実UI、
   deploy、OAuth、secret、実データ、費用操作は実施していない。
+- T-030はrepository内の静的契約だけを検証する。実ブラウザ / 実UIとnative Linux / macOS、
+  配布先copyの更新は`未実施`。
 
 ## 引き継ぎ時の注意
 
