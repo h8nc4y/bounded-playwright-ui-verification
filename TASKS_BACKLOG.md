@@ -36,6 +36,7 @@
 | T-026 | private marker scannerのprocess・Git・出力境界をfail-closed化する | 2026-07-24 cross-repo maintenance | 高 | L | done |
 | T-027 | bounded server runbook の cleanup を直接process所有・例外安全・fail-closed にする | `AGENTS.md` §10 と独立レビュー | 高 | L | done (PR #24) |
 | T-028 | loading / empty / error state の合成report例と全公開exampleのreadiness契約を追加する | `SKILL.md` の状態確認要件と公開example検証のcoverage gap | 中 | M | done (PR #26) |
+| T-029 | 要件再定義ドラフトの確認済み事実を現行状態へ同期する | 2026-07-28 current-state drift | 中 | S | done |
 
 ## 補足メモ
 
@@ -106,6 +107,14 @@
     Windows PowerShell 5.1のcheck:all、private marker scan、UTF-8、whitespaceを実測する。
   - **安全境界**: exampleとmutationは合成値のみを使う。実ブラウザ、実UI、deploy、OAuth、
     secret、実データ、有料サービスは利用せず、実施していないものは`未確認`とする。
+- **T-029 の実装契約（2026-07-28）**:
+  - **目的**: 要件再定義ドラフトの「確認済み事実」とタスク対応表を、現行の公開example数、
+    T-021完了状態、非Windows検証範囲、GitHub実状態へ同期する。
+  - **影響**: current-stateの事実記録だけを修正する。D1〜D4 / O1〜O3、verdict、
+    applicability、scanner走査対象、bounded契約、Non-Goalsの意味は変更しない。
+  - **検証**: public exampleのmanifest実測、GitHub issue / PR / CI実測、PowerShell 5.1の
+    check:all 4ステップ、private marker / whitespaceを確認する。文書のみのため挙動REDは
+    非該当とする。
 
 ## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
 

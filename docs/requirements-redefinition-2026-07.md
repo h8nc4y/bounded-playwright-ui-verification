@@ -1,7 +1,7 @@
 # 再要件定義ドラフト — 価値・差別化・証跡粒度（2026-07）
 
 作成: ClaudeCode Fable5（2026-07-03）。相談レビュー: Codex GPT-5.5（同日・条件付き Go）。
-更新: 2026-07-12（§1 の事実を現況へ同期。提案内容と質問リストの意味は不変）。
+更新: 2026-07-28（§1 / §6 の事実を現況へ同期。提案内容と質問リストの意味は不変）。
 位置づけ: これは**提案ドラフト**であり、`AGENTS.md` §10 の不変条件（製品要件）を変更するものではない。
 意味を変える項目は §14④ ゲートとして「人間への質問」節に隔離した。
 
@@ -9,20 +9,24 @@
 
 ### 確認済み（local git / repo docs / GitHub live で確認）
 
-- `main` は release-ready。T-001〜T-017 done。examples は 9 本（checklist / report template /
-  server runbook / evidence matrix / failed / protected route / responsive overflow /
-  blank render target / hover-focus state）。
+- `main` は release-ready。T-001〜T-017 / T-021 / T-023 / T-025〜T-029 は done。
+  公開exampleは11ファイル（checklist / report template / server runbook文書・実行可能template /
+  evidence matrix / failed / protected route / responsive overflow / blank render target /
+  hover-focus state / loading-empty-error state）。
 - 本ドラフト §6 の R-6（README「What It Solves」への価値定式化の反映）は T-016 として
-  実装済み。残る R-1〜R-5 は `TASKS_BACKLOG.md` の T-018〜T-022 に対応する。
+  実装済み。R-5（非Windows `pwsh` 検証）は T-021 として実装済み。回答待ちの
+  R-1〜R-4 は `TASKS_BACKLOG.md` の T-022 / T-018〜T-020 に対応する。
 - 現物の主成果物は `SKILL.md`（運用規律の文書）であり、UI 検証を実行するコードは同梱しない。
   `scripts/` はリポジトリ自身の OSS 健全性チェックであって UI 検証スクリプトではない
   （`tests/` の回帰テストも scanner 自身のためのもの）。
 - ブランチ保護 + 必須 CI「Validate repository」が有効。open issue / open PR 0 件
-  （2026-07-12 に `gh` で確認）。
+  （2026-07-28 に `gh` で確認）。
 
 ### 未確認
 
-- 非 Windows（macOS / Linux の `pwsh`）での検証スクリプト実機動作。
+- macOS と native Linux host の `pwsh` 実機動作。Debian GNU/Linux 12コンテナでは
+  PowerShell 7.5.8 / Git 2.39.5、network無効、repository read-only mountで
+  check:all 4ステップを確認済み。
 - 外部利用者の存在・利用実態（star / fork / 転用事例）。
 - Codex 以外のランタイム（Claude Code の Skill 形式等）へそのまま載せた場合の互換性。
 - 同種の bounded + truthful reporting 特化 skill の不存在（調査範囲で見当たらなかった、
@@ -155,7 +159,7 @@ sparse claim ledger を提案する。
 | R-2 | verdict 4 値 + applicability 別軸 + passed の evidence pointer 必須化を `SKILL.md` へ明文化 | D2 承認後 | T-018 / blocked |
 | R-3 | MCP ツール経由の検証経路を examples または `SKILL.md` に追記 | D4 の判断後 | T-019 / blocked |
 | R-4 | sparse claim ledger の合成 example を追加（evidence-matrix の一般化） | D3 の tier 方針決定後 | T-020 / blocked |
-| R-5 | 非 Windows `pwsh` 実機検証の記録（実機が無い間は `未確認` を維持） | 自走可 | T-021 / open |
+| R-5 | 非 Windows `pwsh` 実機検証の記録（実機が無い間は `未確認` を維持） | 自走可 | T-021 / done |
 | R-6 | 差別化レイヤーモデル・価値定式化を README「What It Solves」へ反映 | 文言明確化なら自走可 | T-016 / done |
 
 ## 7. 本ドラフトの扱い
