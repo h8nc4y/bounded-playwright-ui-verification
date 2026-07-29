@@ -53,6 +53,26 @@ function Get-RepoText {
   return Get-Content -LiteralPath (Get-RepoPath $RelativePath) -Raw -Encoding UTF8
 }
 
+function Get-RequiredFileSha256 {
+  param([string]$LiteralPath)
+
+  # hash取得失敗をnull同士の一致として扱わず、必ず例外でfail closedにする。
+  $hashResults = @(
+    Microsoft.PowerShell.Utility\Get-FileHash `
+      -LiteralPath $LiteralPath `
+      -Algorithm SHA256 `
+      -ErrorAction Stop
+  )
+  if ($hashResults.Count -ne 1) {
+    throw "SHA-256 calculation did not return exactly one result."
+  }
+  $hash = [string]$hashResults[0].Hash
+  if ($hash -cnotmatch '^[0-9A-F]{64}$') {
+    throw "SHA-256 calculation returned an invalid digest."
+  }
+  return $hash
+}
+
 function Assert-FileContains {
   param(
     [string]$RelativePath,
@@ -396,6 +416,11 @@ function Get-PublicExampleManifest {
   )
 }
 
+
+
+
+
+
 function Get-MarkdownVisibleLines {
   param([string]$Content)
 
@@ -470,6 +495,7 @@ function Get-MarkdownVisibleLines {
 
   return $visibleLines.ToArray()
 }
+
 
 function Get-MarkdownH2Section {
   param(
@@ -678,6 +704,1691 @@ function Get-MarkdownFencedBlocks {
   }
 
   return $blocks.ToArray()
+}
+
+
+
+function Test-RuntimePortableRelativePath {
+  param([string]$Path)
+
+  if ([string]::IsNullOrWhiteSpace($Path) -or
+    $Path -cne $Path.Trim() -or
+    [IO.Path]::IsPathRooted($Path) -or
+    $Path.Contains("\")) {
+    return $false
+  }
+  $segments = @($Path -split "/")
+  foreach ($segment in $segments) {
+    if ([string]::IsNullOrWhiteSpace($segment) -or
+      $segment -in @(".", "..") -or
+      $segment -match '[\x00-\x1F<>:"\\|?*]' -or
+      $segment -match '[. ]$' -or
+      $segment -match '^(?i:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³]) *(?:\..*)?$') {
+      return $false
+    }
+  }
+  return $true
+}
+
+
+function Get-RuntimeClosureExpectedPaths {
+  param([object[]]$PublicExampleManifest)
+
+  # runtime正本は、SKILL本体と既存public manifestの順序付きpathだけへ閉じる。
+  return @("SKILL.md") + @(
+    $PublicExampleManifest |
+      ForEach-Object { [string]$_.Path }
+  )
+}
+
+function Get-RuntimeClosureSupportedSkillLinkLines {
+  param([object[]]$PublicExampleManifest)
+
+  # Markdownを再実装せず、現在サポートするsingle-line linkの全文だけを許可する。
+  $supportedLines = New-Object System.Collections.Generic.List[string]
+  $supportedLines.Add(
+    '[Playwright discourages using `networkidle`](https://playwright.dev/docs/api/class-page#page-goto-option-wait-until)'
+  ) | Out-Null
+  foreach ($entry in $PublicExampleManifest) {
+    $supportedLines.Add(
+      "- [$([string]$entry.Label)]($([string]$entry.Path))"
+    ) | Out-Null
+  }
+  return $supportedLines.ToArray()
+}
+
+function Get-OrdinalOccurrenceCount {
+  param(
+    [string]$Text,
+    [string]$Needle
+  )
+
+  if ([string]::IsNullOrEmpty($Needle)) {
+    throw "Occurrence needle must not be empty."
+  }
+  $count = 0
+  $offset = 0
+  while ($offset -le ($Text.Length - $Needle.Length)) {
+    $matchIndex = $Text.IndexOf(
+      $Needle,
+      $offset,
+      [StringComparison]::Ordinal
+    )
+    if ($matchIndex -lt 0) {
+      break
+    }
+    $count++
+    $offset = $matchIndex + $Needle.Length
+  }
+  return $count
+}
+
+function Get-RuntimeCloneBlockTemplate {
+  # Install節の先頭blockも全文固定し、clone手順へcopy commandを隠す迂回を防ぐ。
+  return @'
+git clone https://github.com/h8nc4y/bounded-playwright-ui-verification.git
+cd bounded-playwright-ui-verification
+'@
+}
+
+function Get-RuntimeClosureInstallBlockTemplate {
+  param([int]$ExpectedFileCount = 12)
+
+  # READMEの実行可能なinstall例を全文固定し、comment decoyや一部だけ正しいcopyを許可しない。
+  $template = @'
+# runtime-closure-install:start
+$repoRoot = (Resolve-Path ".").Path
+$manifestPath = Join-Path $repoRoot "runtime-files.txt"
+$runtimeFiles = @(Get-Content -LiteralPath $manifestPath -Encoding UTF8)
+if ($runtimeFiles.Count -ne __EXPECTED_FILE_COUNT__) {
+  throw "Runtime manifest must contain exactly __EXPECTED_FILE_COUNT__ files."
+}
+$runtimeFilesUnique = @($runtimeFiles | Sort-Object -Unique)
+if ($runtimeFilesUnique.Count -ne $runtimeFiles.Count) {
+  throw "Runtime manifest contains a duplicate path."
+}
+$assertPortableRuntimePath = {
+  param([string]$CandidatePath)
+
+  if ([string]::IsNullOrWhiteSpace($CandidatePath) -or
+    $CandidatePath -cne $CandidatePath.Trim() -or
+    [IO.Path]::IsPathRooted($CandidatePath) -or
+    $CandidatePath.Contains("\")) {
+    throw "Runtime manifest contains an unsafe path."
+  }
+  foreach ($candidateSegment in @($CandidatePath -split "/")) {
+    if ([string]::IsNullOrWhiteSpace($candidateSegment) -or
+      $candidateSegment -in @(".", "..") -or
+      $candidateSegment -match '[\x00-\x1F<>:"\\|?*]' -or
+      $candidateSegment -match '[. ]$' -or
+      $candidateSegment -match '^(?i:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³]) *(?:\..*)?$') {
+      throw "Runtime manifest contains an unsafe path."
+    }
+  }
+}
+
+$getRequiredFileSha256 = {
+  param([string]$LiteralPath)
+
+  # hash取得失敗をnull同士の一致として扱わず、必ず例外でfail closedにする。
+  $hashResults = @(
+    Microsoft.PowerShell.Utility\Get-FileHash `
+      -LiteralPath $LiteralPath `
+      -Algorithm SHA256 `
+      -ErrorAction Stop
+  )
+  if ($hashResults.Count -ne 1) {
+    throw "SHA-256 calculation did not return exactly one result."
+  }
+  $hash = [string]$hashResults[0].Hash
+  if ($hash -cnotmatch '^[0-9A-F]{64}$') {
+    throw "SHA-256 calculation returned an invalid digest."
+  }
+  return $hash
+}
+
+$skillRoot = if ($env:CODEX_HOME) {
+  Join-Path $env:CODEX_HOME "skills"
+} else {
+  Join-Path (Join-Path $HOME ".codex") "skills"
+}
+$skillRootFullPath = [IO.Path]::GetFullPath($skillRoot)
+if (-not (Test-Path -LiteralPath $skillRootFullPath -PathType Container)) {
+  throw "Skill root does not exist: $skillRootFullPath"
+}
+$targetFullPath = [IO.Path]::GetFullPath(
+  (Join-Path $skillRootFullPath "bounded-playwright-ui-verification")
+)
+if (Test-Path -LiteralPath $targetFullPath) {
+  throw "Skill already exists: $targetFullPath"
+}
+$repoItem = Get-Item -LiteralPath $repoRoot -ErrorAction Stop
+if ($repoItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+  throw "Repository root must not be a reparse point."
+}
+
+$repoBoundary = $repoRoot.TrimEnd([char]47, [char]92) +
+  [IO.Path]::DirectorySeparatorChar
+$stagingName = ".bounded-playwright-ui-verification.install-" +
+  [guid]::NewGuid().ToString("N")
+$stagingFullPath = [IO.Path]::GetFullPath(
+  (Join-Path $skillRootFullPath $stagingName)
+)
+$stagingBoundary = $stagingFullPath.TrimEnd([char]47, [char]92) +
+  [IO.Path]::DirectorySeparatorChar
+$copyPlan = foreach ($relativePath in $runtimeFiles) {
+  & $assertPortableRuntimePath $relativePath
+  $segments = @($relativePath -split "/")
+
+  $sourcePath = [IO.Path]::GetFullPath((Join-Path $repoRoot $relativePath))
+  $destinationPath = [IO.Path]::GetFullPath(
+    (Join-Path $stagingFullPath $relativePath)
+  )
+  if (-not $sourcePath.StartsWith(
+      $repoBoundary,
+      [StringComparison]::OrdinalIgnoreCase
+    ) -or
+    -not $destinationPath.StartsWith(
+      $stagingBoundary,
+      [StringComparison]::OrdinalIgnoreCase
+    )) {
+    throw "Runtime manifest path escaped its allowed root."
+  }
+
+  $sourceCursor = $repoRoot
+  foreach ($segment in $segments) {
+    $sourceCursor = Join-Path $sourceCursor $segment
+    $sourceItem = Get-Item -LiteralPath $sourceCursor -ErrorAction Stop
+    if ($sourceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw "Runtime manifest path contains a reparse point."
+    }
+  }
+  if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+    throw "Runtime manifest source is not a file."
+  }
+
+  [pscustomobject]@{
+    Source = $sourcePath
+    Destination = $destinationPath
+    Segments = $segments
+    ExpectedHash = & $getRequiredFileSha256 $sourcePath
+  }
+}
+
+try {
+  New-Item `
+    -ItemType Directory `
+    -Path $stagingFullPath `
+    -ErrorAction Stop | Out-Null
+  foreach ($copyItem in $copyPlan) {
+    $destinationDirectory = Split-Path -Parent $copyItem.Destination
+    New-Item `
+      -ItemType Directory `
+      -Path $destinationDirectory `
+      -Force `
+      -ErrorAction Stop | Out-Null
+    Copy-Item `
+      -LiteralPath $copyItem.Source `
+      -Destination $copyItem.Destination `
+      -ErrorAction Stop
+    if ($copyItem.ExpectedHash -cne
+      (& $getRequiredFileSha256 $copyItem.Destination)) {
+      throw "Runtime file copy failed its SHA-256 check."
+    }
+  }
+
+  # claim直前にsource/staging chainとpreflight hashを再検査し、通常の同時変更を拒否する。
+  $stagingItem = Get-Item -LiteralPath $stagingFullPath -ErrorAction Stop
+  if ($stagingItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    throw "Runtime staging root changed before atomic claim."
+  }
+  foreach ($copyItem in $copyPlan) {
+    $sourceCursor = $repoRoot
+    foreach ($segment in $copyItem.Segments) {
+      $sourceCursor = Join-Path $sourceCursor $segment
+      $sourceItem = Get-Item -LiteralPath $sourceCursor -ErrorAction Stop
+      if ($sourceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw "Runtime source changed after its preflight hash."
+      }
+    }
+    if (-not (Test-Path -LiteralPath $copyItem.Source -PathType Leaf) -or
+      (& $getRequiredFileSha256 $copyItem.Source) -cne
+        $copyItem.ExpectedHash) {
+      throw "Runtime source changed after its preflight hash."
+    }
+
+    $destinationCursor = $stagingFullPath
+    foreach ($segment in $copyItem.Segments) {
+      $destinationCursor = Join-Path $destinationCursor $segment
+      $destinationItem = Get-Item `
+        -LiteralPath $destinationCursor `
+        -ErrorAction Stop
+      if ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw "Runtime staging path changed before atomic claim."
+      }
+    }
+    if (-not (Test-Path -LiteralPath $copyItem.Destination -PathType Leaf) -or
+      (& $getRequiredFileSha256 $copyItem.Destination) -cne
+        $copyItem.ExpectedHash) {
+      throw "Runtime staging path changed before atomic claim."
+    }
+  }
+  [IO.Directory]::Move($stagingFullPath, $targetFullPath)
+} catch {
+  Write-Warning (
+    "Install failed. Staging was not removed automatically; " +
+    "verify ownership before cleanup: $stagingFullPath"
+  )
+  throw
+}
+# runtime-closure-install:end
+'@
+  return $template.Replace(
+    "__EXPECTED_FILE_COUNT__",
+    [string]$ExpectedFileCount
+  )
+}
+
+function Get-RuntimeClosureInstallSectionTemplate {
+  param([int]$ExpectedFileCount = 12)
+
+  # READMEのInstall全体をraw canonical textとして固定し、Markdown意味解析を契約外にする。
+  $section = @'
+## Install
+
+Clone the repository:
+
+```powershell
+__CLONE_BLOCK__
+```
+
+Run the repository checks (see [Validation And Scan](#validation-and-scan))
+before copying the skill.
+
+`runtime-files.txt` is the deterministic runtime closure: `SKILL.md` plus the
+11 ordered paths in the existing public-example manifest. The same manifest
+already fixes the label, path, count, and publication section in both `SKILL.md`
+and this README. The required-file gate verifies that every declaration is a
+present leaf. Every manifest component must also be portable to Windows (no
+reserved device names, alternate data streams, wildcards, control characters,
+or trailing dots/spaces).
+
+The supported `SKILL.md` link surface is deliberately small: one exact official
+Playwright link followed by the 11 exact single-line public-example links.
+Unknown raw `](` lines, reference-style `]:` syntax, and raw HTML `<a>` / `<img>`
+link surfaces are unsupported and fail closed. Adding another runtime file is a
+reviewed public-manifest change, not automatic CommonMark link discovery.
+
+The repository check does not claim to parse arbitrary Markdown containers.
+Instead, it compares this complete `## Install` section through the fixed
+`## Manual Use` boundary with canonical text using ordinal equality. Alternate
+Install headings, runtime markers, and runtime copy/claim tokens outside this
+canonical block are unsupported lexical surfaces, including when they appear in
+code or comments. The canonical PowerShell block is also parsed with the
+PowerShell AST parser before acceptance.
+
+Manual install into a Codex-style skill directory:
+
+```powershell
+__RUNTIME_BLOCK__
+```
+
+If your agent runtime uses a different skill location, use the same
+manifest-driven copy with that documented skill root. The example refuses to
+overwrite an existing target, including one created after preflight. It copies
+into a unique sibling staging directory and atomically claims the final target
+only after the source and staging chains are revalidated against their preflight
+SHA-256 values. Run it only from a trusted, quiescent clone: a malicious local
+process racing individual path opens is outside this snippet's safety boundary.
+On failure it deliberately retains staging because a pathname alone cannot
+prove directory ownership; verify ownership before removing it. Review or remove
+an old installation separately instead of mixing versions.
+'@
+  $cloneBlock = (Get-RuntimeCloneBlockTemplate).Replace("`r`n", "`n")
+  $runtimeBlock = (
+    Get-RuntimeClosureInstallBlockTemplate `
+      -ExpectedFileCount $ExpectedFileCount
+  ).Replace("`r`n", "`n")
+  return (
+    $section.Replace("__CLONE_BLOCK__", $cloneBlock).Replace(
+      "__RUNTIME_BLOCK__",
+      $runtimeBlock
+    ).TrimEnd([char]13, [char]10) +
+    "`n`n"
+  )
+}
+
+function Get-PowerShellParseErrors {
+  param([string]$ScriptText)
+
+  # 実行せずAST parserだけを通し、READMEのcopy可能なPowerShell本文の構文退行を検出する。
+  $parseTokens = $null
+  $parseErrors = $null
+  $null = [System.Management.Automation.Language.Parser]::ParseInput(
+    $ScriptText,
+    [ref]$parseTokens,
+    [ref]$parseErrors
+  )
+  return @($parseErrors)
+}
+
+
+function Get-RuntimeClosureContractErrors {
+  param(
+    [string]$RuntimeManifestText,
+    [string]$ReadmeText,
+    [string]$SkillText,
+    [object[]]$PublicExampleManifest
+  )
+
+  $contractErrors = New-Object System.Collections.Generic.List[string]
+  $addContractError = {
+    param([string]$Message)
+
+    if (-not $contractErrors.Contains($Message)) {
+      $contractErrors.Add($Message) | Out-Null
+    }
+  }
+
+  # runtime closureの正本は、固定のSKILL本体とpublic manifestの順序付きpathだけに閉じる。
+  $expectedPaths = @(
+    Get-RuntimeClosureExpectedPaths `
+      -PublicExampleManifest $PublicExampleManifest
+  )
+  $supportedSkillLines = @(
+    Get-RuntimeClosureSupportedSkillLinkLines `
+      -PublicExampleManifest $PublicExampleManifest
+  )
+  if ($expectedPaths.Count -ne 12 -or
+    $supportedSkillLines.Count -ne 12) {
+    & $addContractError (
+      "[runtime-closure-skill-links] The canonical runtime and SKILL link " +
+      "surfaces must each contain exactly 12 entries."
+    )
+  }
+
+  # SKILL.mdはraw single-line linkの全文、個数、順序だけを受理し、Markdown意味解析を行わない。
+  $skillLines = @(
+    $SkillText.Replace("`r`n", "`n").Replace("`r", "`n") -split "`n"
+  )
+  $actualSkillLinkLines = @(
+    $skillLines |
+      Where-Object { ([string]$_).Contains("](") }
+  )
+  $skillLinkSurfaceChanged = (
+    $actualSkillLinkLines.Count -ne $supportedSkillLines.Count
+  )
+  if (-not $skillLinkSurfaceChanged) {
+    for (
+      $lineIndex = 0;
+      $lineIndex -lt $supportedSkillLines.Count;
+      $lineIndex++
+    ) {
+      if ($actualSkillLinkLines[$lineIndex] -cne
+        $supportedSkillLines[$lineIndex]) {
+        $skillLinkSurfaceChanged = $true
+        break
+      }
+    }
+  }
+  if ($skillLinkSurfaceChanged) {
+    & $addContractError (
+      "[runtime-closure-skill-links] SKILL.md raw link lines changed in " +
+      "content, count, or order."
+    )
+  }
+  if ($SkillText.Contains("]:")) {
+    & $addContractError (
+      "[runtime-closure-skill-links] SKILL.md reference-style link " +
+      "definitions are unsupported."
+    )
+  }
+  if ($SkillText -match '(?i)<(?:a|img)\b') {
+    & $addContractError (
+      "[runtime-closure-skill-links] SKILL.md raw HTML local-link surfaces " +
+      "are unsupported."
+    )
+  }
+
+  # manifestはLF終端、portable relative path、Windows相当の重複禁止、exact orderを固定する。
+  $normalizedManifest = $RuntimeManifestText.Replace("`r`n", "`n")
+  if ($normalizedManifest.Contains("`r")) {
+    & $addContractError (
+      "[runtime-closure-manifest] Manifest contains a bare carriage return."
+    )
+  }
+  $manifestHasFinalLf = $normalizedManifest.EndsWith("`n")
+  if (-not $manifestHasFinalLf) {
+    & $addContractError (
+      "[runtime-closure-manifest] Manifest must end with one LF."
+    )
+  }
+  $manifestBody = if ($manifestHasFinalLf) {
+    $normalizedManifest.Substring(0, $normalizedManifest.Length - 1)
+  } else {
+    $normalizedManifest
+  }
+  $actualPaths = if ([string]::IsNullOrEmpty($manifestBody)) {
+    @()
+  } else {
+    @($manifestBody -split "`n")
+  }
+
+  $hasUnsafePath = $false
+  foreach ($path in $actualPaths) {
+    if (-not (Test-RuntimePortableRelativePath -Path ([string]$path))) {
+      $hasUnsafePath = $true
+      break
+    }
+  }
+  if ($hasUnsafePath) {
+    & $addContractError (
+      "[runtime-closure-manifest] Manifest contains an unsafe path."
+    )
+  }
+
+  $hasDuplicatePath = $false
+  for (
+    $leftIndex = 0;
+    $leftIndex -lt $actualPaths.Count -and -not $hasDuplicatePath;
+    $leftIndex++
+  ) {
+    for (
+      $rightIndex = $leftIndex + 1;
+      $rightIndex -lt $actualPaths.Count;
+      $rightIndex++
+    ) {
+      if ([string]::Equals(
+          [string]$actualPaths[$leftIndex],
+          [string]$actualPaths[$rightIndex],
+          [StringComparison]::OrdinalIgnoreCase
+        )) {
+        $hasDuplicatePath = $true
+        break
+      }
+    }
+  }
+  if ($hasDuplicatePath) {
+    & $addContractError (
+      "[runtime-closure-manifest] Manifest contains a duplicate path."
+    )
+  }
+
+  if ($actualPaths.Count -ne $expectedPaths.Count) {
+    & $addContractError (
+      "[runtime-closure-manifest] Manifest file count changed."
+    )
+  } else {
+    for (
+      $pathIndex = 0;
+      $pathIndex -lt $expectedPaths.Count;
+      $pathIndex++
+    ) {
+      if ($actualPaths[$pathIndex] -cne $expectedPaths[$pathIndex]) {
+        & $addContractError (
+          "[runtime-closure-manifest] Manifest order or path changed."
+        )
+        break
+      }
+    }
+  }
+
+  # READMEはInstallからManual Use直前までをraw canonical textとして比較する。
+  $expectedInstallSection = (
+    Get-RuntimeClosureInstallSectionTemplate `
+      -ExpectedFileCount $expectedPaths.Count
+  ).Replace("`r`n", "`n")
+  $installHeading = "## Install"
+  $manualUseHeading = "## Manual Use"
+  $readmeLines = @($ReadmeText -split "`n")
+  $installHeadingCount = @(
+    $readmeLines |
+      Where-Object { $_ -ceq $installHeading }
+  ).Count
+  $manualUseHeadingCount = @(
+    $readmeLines |
+      Where-Object { $_ -ceq $manualUseHeading }
+  ).Count
+  $expectedSectionCount = Get-OrdinalOccurrenceCount `
+    -Text $ReadmeText `
+    -Needle $expectedInstallSection
+  if ($installHeadingCount -ne 1 -or
+    $manualUseHeadingCount -ne 1) {
+    & $addContractError (
+      "[runtime-closure-install] README.md must contain unique exact Install " +
+      "and Manual Use boundaries."
+    )
+  }
+  if ($expectedSectionCount -ne 1) {
+    & $addContractError (
+      "[runtime-closure-install] README.md canonical Install section changed."
+    )
+  }
+
+  # inline prose内の同じ文字列を飛ばし、完全一致行のIndexOf位置だけを返す。
+  $getExactLineStartIndex = {
+    param(
+      [string]$Text,
+      [string]$Line
+    )
+
+    $searchIndex = 0
+    while ($searchIndex -le ($Text.Length - $Line.Length)) {
+      $candidateIndex = $Text.IndexOf(
+        $Line,
+        $searchIndex,
+        [StringComparison]::Ordinal
+      )
+      if ($candidateIndex -lt 0) {
+        return -1
+      }
+      $hasStartBoundary = (
+        $candidateIndex -eq 0 -or
+        $Text[$candidateIndex - 1] -eq [char]10
+      )
+      $afterCandidateIndex = $candidateIndex + $Line.Length
+      $hasEndBoundary = (
+        $afterCandidateIndex -eq $Text.Length -or
+        $Text[$afterCandidateIndex] -eq [char]10
+      )
+      if ($hasStartBoundary -and $hasEndBoundary) {
+        return $candidateIndex
+      }
+      $searchIndex = $candidateIndex + 1
+    }
+    return -1
+  }
+  $installStartIndex = & $getExactLineStartIndex `
+    -Text $ReadmeText `
+    -Line $installHeading
+  $manualUseStartIndex = & $getExactLineStartIndex `
+    -Text $ReadmeText `
+    -Line $manualUseHeading
+  $installHasExactLineBoundary = (
+    $installStartIndex -ge 0 -and
+    ($installStartIndex -eq 0 -or
+      $ReadmeText[$installStartIndex - 1] -eq [char]10) -and
+    ($installStartIndex + $installHeading.Length) -lt $ReadmeText.Length -and
+    $ReadmeText[$installStartIndex + $installHeading.Length] -eq [char]10
+  )
+  $manualUseHasExactLineBoundary = (
+    $manualUseStartIndex -ge 0 -and
+    ($manualUseStartIndex -eq 0 -or
+      $ReadmeText[$manualUseStartIndex - 1] -eq [char]10) -and
+    ($manualUseStartIndex + $manualUseHeading.Length) -lt
+      $ReadmeText.Length -and
+    $ReadmeText[$manualUseStartIndex + $manualUseHeading.Length] -eq [char]10
+  )
+  $hasOrderedReadmeBoundaries = (
+    $installHeadingCount -eq 1 -and
+    $manualUseHeadingCount -eq 1 -and
+    $installHasExactLineBoundary -and
+    $manualUseHasExactLineBoundary -and
+    $manualUseStartIndex -gt $installStartIndex
+  )
+  # boundary不正時はfull READMEをoutsideとして扱い、fail-openを避ける。
+  $outsideInstallText = $ReadmeText
+  $installPrefixText = ""
+  if (-not $hasOrderedReadmeBoundaries) {
+    & $addContractError (
+      "[runtime-closure-install] README.md Install boundary order is invalid."
+    )
+  } else {
+    $actualInstallSection = $ReadmeText.Substring(
+      $installStartIndex,
+      $manualUseStartIndex - $installStartIndex
+    )
+    if ($actualInstallSection -cne $expectedInstallSection) {
+      & $addContractError (
+        "[runtime-closure-install] README.md Install bytes changed."
+      )
+    }
+
+    # valid boundary時だけcanonical sectionをoutside検査対象から除く。
+    $installPrefixText = $ReadmeText.Substring(0, $installStartIndex)
+    $outsideInstallText = (
+      $installPrefixText +
+      $ReadmeText.Substring($manualUseStartIndex)
+    )
+  }
+
+  # Install前に未対応containerを許すとcanonical bytes全体を非表示にできるため、一律拒否する。
+  if ($hasOrderedReadmeBoundaries) {
+    $installPrefixLines = @($installPrefixText -split "`n")
+    $hasInstallPrefixFence = @(
+      $installPrefixLines |
+        Where-Object { $_ -match '^[ ]{0,3}(?:`{3,}|~{3,})' }
+    ).Count -gt 0
+    if ($installPrefixText.IndexOf(
+        "<",
+        [StringComparison]::Ordinal
+      ) -ge 0 -or $hasInstallPrefixFence) {
+      & $addContractError (
+        "[runtime-closure-install] README.md Install prefix contains an " +
+        "unsupported raw HTML or top-level fence wrapper surface."
+      )
+    }
+  }
+
+  # canonical外はruntime専用marker/tokenだけをdenylistし、一般proseの意味解析を主張しない。
+  $outsideRuntimeTokens = @(
+    "runtime-closure-install:start",
+    "runtime-closure-install:end",
+    "runtime-files.txt",
+    "Copy-Item",
+    "[IO.Directory]::Move",
+    '$runtimeFiles',
+    '$stagingFullPath',
+    '$stagingName',
+    '$targetFullPath',
+    '$copyPlan',
+    '$assertPortableRuntimePath',
+    '$getRequiredFileSha256'
+  )
+  foreach ($outsideRuntimeToken in $outsideRuntimeTokens) {
+    if ($outsideInstallText.IndexOf(
+        $outsideRuntimeToken,
+        [StringComparison]::OrdinalIgnoreCase
+      ) -ge 0) {
+      & $addContractError (
+        "[runtime-closure-install] README.md contains a runtime marker or " +
+        "copy/claim token outside the canonical Install section."
+      )
+      break
+    }
+  }
+
+  # outsideの`#`行を既知headingだけへ閉じ、container内のsemantic ATXもfail closedにする。
+  $outsideReadmeLines = @($outsideInstallText -split "`n")
+  $expectedOutsideHashLines = @(
+    "# bounded-playwright-ui-verification",
+    "## Who It Is For",
+    "## What It Solves",
+    "## Manual Use",
+    "## Examples",
+    "## Validation And Scan",
+    "## Contributing",
+    "## Security",
+    "## Limitations",
+    "## Non-Goals",
+    "## Safety Notes",
+    "## License"
+  )
+  $actualOutsideHashLines = @(
+    $outsideReadmeLines |
+      Where-Object { $_.IndexOf("#", [StringComparison]::Ordinal) -ge 0 } |
+      ForEach-Object { [string]$_ }
+  )
+  $outsideHashLinesMatch = (
+    $actualOutsideHashLines.Count -eq
+      $expectedOutsideHashLines.Count
+  )
+  if ($outsideHashLinesMatch) {
+    for (
+      $headingIndex = 0;
+      $headingIndex -lt $expectedOutsideHashLines.Count;
+      $headingIndex++
+    ) {
+      if ($actualOutsideHashLines[$headingIndex] -cne
+        $expectedOutsideHashLines[$headingIndex]) {
+        $outsideHashLinesMatch = $false
+        break
+      }
+    }
+  }
+  if (-not $outsideHashLinesMatch) {
+    & $addContractError (
+      "[runtime-closure-install] README.md outside hash-bearing lines " +
+      "changed from the exact heading allowlist, order, or count."
+    )
+  }
+
+  # entity decodeは実装せず、canonical外ではcharacter reference自体を非対応とする。
+  $characterReferencePattern = (
+    '&(?:#[0-9]+|#[xX][0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);'
+  )
+  if ($outsideInstallText -match $characterReferencePattern) {
+    & $addContractError (
+      "[runtime-closure-install] README.md contains an unsupported " +
+      "character reference outside the canonical Install section."
+    )
+  }
+
+  # raw HTML / Setext headingはsemantic labelを解釈せず、一律fail closedにする。
+  foreach ($outsideReadmeLine in $outsideReadmeLines) {
+    if ($outsideReadmeLine -match '(?i)<h[1-6]\b') {
+      & $addContractError (
+        "[runtime-closure-install] README.md contains an unsupported raw " +
+        "HTML heading surface."
+      )
+      break
+    }
+  }
+  $setextUnderlinePattern = (
+    '^[ \t]*(?:(?:>[ \t]*)|(?:(?:[-+*]|\d{1,9}[.)])[ \t]+))*' +
+    '[ \t]*(?:=+|-+)[ \t]*$'
+  )
+  for (
+    $readmeLineIndex = 0;
+    $readmeLineIndex -lt ($outsideReadmeLines.Count - 1);
+    $readmeLineIndex++
+  ) {
+    $isSetextUnderline = (
+      $outsideReadmeLines[$readmeLineIndex + 1] -match
+        $setextUnderlinePattern
+    )
+    if ($isSetextUnderline) {
+      & $addContractError (
+        "[runtime-closure-install] README.md contains an unsupported " +
+        "Setext heading surface outside the canonical Install section."
+      )
+      break
+    }
+  }
+
+  # canonical templateとREADME内のactual marker区間をPowerShell parserで独立検証する。
+  $runtimeTemplate = Get-RuntimeClosureInstallBlockTemplate `
+    -ExpectedFileCount $expectedPaths.Count
+  if (@(
+      Get-PowerShellParseErrors -ScriptText $runtimeTemplate
+    ).Count -ne 0) {
+    & $addContractError (
+      "[runtime-closure-powershell] Runtime closure template has invalid " +
+      "PowerShell syntax."
+    )
+  }
+
+  $runtimeStartMarker = "# runtime-closure-install:start"
+  $runtimeEndMarker = "# runtime-closure-install:end"
+  $runtimeStartCount = Get-OrdinalOccurrenceCount `
+    -Text $ReadmeText `
+    -Needle $runtimeStartMarker
+  $runtimeEndCount = Get-OrdinalOccurrenceCount `
+    -Text $ReadmeText `
+    -Needle $runtimeEndMarker
+  $runtimeStartIndex = $ReadmeText.IndexOf(
+    $runtimeStartMarker,
+    [StringComparison]::Ordinal
+  )
+  $runtimeEndIndex = $ReadmeText.IndexOf(
+    $runtimeEndMarker,
+    [StringComparison]::Ordinal
+  )
+  $hasOrderedRuntimeMarkers = (
+    $runtimeStartCount -eq 1 -and
+    $runtimeEndCount -eq 1 -and
+    $runtimeStartIndex -ge 0 -and
+    $runtimeEndIndex -gt $runtimeStartIndex
+  )
+  if (-not $hasOrderedRuntimeMarkers) {
+    & $addContractError (
+      "[runtime-closure-install] README.md runtime markers must each occur " +
+      "once and in order."
+    )
+  } else {
+    if ($hasOrderedReadmeBoundaries -and
+      ($runtimeStartIndex -lt $installStartIndex -or
+        $runtimeEndIndex -ge $manualUseStartIndex)) {
+      & $addContractError (
+        "[runtime-closure-install] README.md runtime markers escaped the " +
+        "canonical Install section."
+      )
+    }
+    $actualRuntimeScript = $ReadmeText.Substring(
+      $runtimeStartIndex,
+      ($runtimeEndIndex + $runtimeEndMarker.Length) - $runtimeStartIndex
+    )
+    if (@(
+        Get-PowerShellParseErrors -ScriptText $actualRuntimeScript
+      ).Count -ne 0) {
+      & $addContractError (
+        "[runtime-closure-powershell] README.md runtime closure block has " +
+        "invalid PowerShell syntax."
+      )
+    }
+  }
+
+  return $contractErrors.ToArray()
+}
+
+function Assert-RuntimeClosureContractMutations {
+  param(
+    [string]$RuntimeManifestText,
+    [string]$ReadmeText,
+    [string]$SkillText,
+    [object[]]$PublicExampleManifest
+  )
+
+  $selfTestErrorCountBefore = $errors.Count
+  $expectedMutationCount = 38
+  $expectedPaths = @(
+    Get-RuntimeClosureExpectedPaths `
+      -PublicExampleManifest $PublicExampleManifest
+  )
+  $supportedSkillLines = @(
+    Get-RuntimeClosureSupportedSkillLinkLines `
+      -PublicExampleManifest $PublicExampleManifest
+  )
+  $markdownFence = ([string][char]96) * 3
+  $mutationCases = New-Object System.Collections.Generic.List[object]
+
+  # fixture生成時の誤置換を自己検出し、狙った1箇所だけを変える。
+  $replaceExactlyOnce = {
+    param(
+      [string]$Text,
+      [string]$Needle,
+      [string]$Replacement,
+      [string]$MutationName
+    )
+
+    $occurrenceCount = Get-OrdinalOccurrenceCount `
+      -Text $Text `
+      -Needle $Needle
+    if ($occurrenceCount -ne 1) {
+      Add-Error (
+        "[runtime-closure-self-test] Mutation '$MutationName' expected " +
+        "one source occurrence, found $occurrenceCount."
+      )
+      return $Text
+    }
+    return $Text.Replace($Needle, $Replacement)
+  }
+  $addMutation = {
+    param(
+      [string]$Name,
+      [string]$Expected,
+      [string]$Manifest,
+      [string]$Readme,
+      [string]$Skill
+    )
+
+    $mutationCases.Add([pscustomobject]@{
+      Name = $Name
+      Expected = $Expected
+      Manifest = $Manifest
+      Readme = $Readme
+      Skill = $Skill
+    }) | Out-Null
+  }
+
+  # mutationに入る前に、現在の正本がstrict contractを満たすことを固定する。
+  $baselineErrors = @(
+    Get-RuntimeClosureContractErrors `
+      -RuntimeManifestText $RuntimeManifestText `
+      -ReadmeText $ReadmeText `
+      -SkillText $SkillText `
+      -PublicExampleManifest $PublicExampleManifest
+  )
+  if ($baselineErrors.Count -ne 0) {
+    Add-Error (
+      "[runtime-closure-self-test] Baseline failed the runtime closure " +
+      "contract: $($baselineErrors -join '; ')"
+    )
+  }
+  if ($expectedPaths.Count -lt 3 -or
+    $supportedSkillLines.Count -lt 3) {
+    Add-Error (
+      "[runtime-closure-self-test] Expected at least three runtime paths " +
+      "and supported SKILL link lines."
+    )
+    return
+  }
+
+  # manifestは集合、順序、重複、portable pathを独立した5クラスで検証する。
+  $missingPaths = @($expectedPaths | Select-Object -Skip 1)
+  & $addMutation `
+    "manifest-missing" `
+    "[runtime-closure-manifest]" `
+    (($missingPaths -join "`n") + "`n") `
+    $ReadmeText `
+    $SkillText
+
+  $extraPaths = @($expectedPaths) + @("examples/undeclared.md")
+  & $addMutation `
+    "manifest-extra" `
+    "[runtime-closure-manifest]" `
+    (($extraPaths -join "`n") + "`n") `
+    $ReadmeText `
+    $SkillText
+
+  $reorderedPaths = @(
+    $expectedPaths |
+      ForEach-Object { [string]$_ }
+  )
+  $reorderedPath = $reorderedPaths[1]
+  $reorderedPaths[1] = $reorderedPaths[2]
+  $reorderedPaths[2] = $reorderedPath
+  & $addMutation `
+    "manifest-reordered" `
+    "[runtime-closure-manifest]" `
+    (($reorderedPaths -join "`n") + "`n") `
+    $ReadmeText `
+    $SkillText
+
+  $duplicatePaths = @(
+    $expectedPaths |
+      ForEach-Object { [string]$_ }
+  )
+  $duplicatePaths[$duplicatePaths.Count - 1] = $duplicatePaths[0]
+  & $addMutation `
+    "manifest-duplicate" `
+    "[runtime-closure-manifest]" `
+    (($duplicatePaths -join "`n") + "`n") `
+    $ReadmeText `
+    $SkillText
+
+  $unsafePaths = @(
+    $expectedPaths |
+      ForEach-Object { [string]$_ }
+  )
+  $unsafePaths[0] = "../SKILL.md"
+  & $addMutation `
+    "manifest-unsafe" `
+    "[runtime-closure-manifest]" `
+    (($unsafePaths -join "`n") + "`n") `
+    $ReadmeText `
+    $SkillText
+
+  # SKILL.mdは、許可したsingle-line linkの全文、順序、個数だけを受理する。
+  $missingSkillLine = & $replaceExactlyOnce `
+    $SkillText `
+    ($supportedSkillLines[0] + "`n") `
+    "" `
+    "skill-supported-line-missing"
+  & $addMutation `
+    "skill-supported-line-missing" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $missingSkillLine
+
+  $duplicateSkillLine = (
+    $SkillText.TrimEnd([char]10) +
+    "`n`n" +
+    $supportedSkillLines[0] +
+    "`n"
+  )
+  & $addMutation `
+    "skill-supported-line-duplicate" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $duplicateSkillLine
+
+  $orderedSkillPair = (
+    $supportedSkillLines[1] +
+    "`n" +
+    $supportedSkillLines[2]
+  )
+  $reorderedSkillPair = (
+    $supportedSkillLines[2] +
+    "`n" +
+    $supportedSkillLines[1]
+  )
+  $reorderedSkill = & $replaceExactlyOnce `
+    $SkillText `
+    $orderedSkillPair `
+    $reorderedSkillPair `
+    "skill-supported-lines-reordered"
+  & $addMutation `
+    "skill-supported-lines-reordered" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $reorderedSkill
+
+  $extraOnAllowedLine = & $replaceExactlyOnce `
+    $SkillText `
+    $supportedSkillLines[0] `
+    ($supportedSkillLines[0] + " [extra](CONTRIBUTING.md)") `
+    "skill-allowed-line-plus-extra"
+  & $addMutation `
+    "skill-allowed-line-plus-extra" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $extraOnAllowedLine
+
+  # v11で見つかったcontainer解釈の差は、strict lexical subsetでは未対応として拒否する。
+  $unknownSkillLink = (
+    $SkillText.TrimEnd([char]10) +
+    "`n`n" +
+    "- list item`n" +
+    "`n" +
+    "  > ${markdownFence}text`n" +
+    "  > [unsupported](CONTRIBUTING.md)`n" +
+    "  > $markdownFence" +
+    "`n"
+  )
+  & $addMutation `
+    "skill-unknown-link-in-container" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $unknownSkillLink
+
+  $referenceStyleSkill = (
+    $SkillText.TrimEnd([char]10) +
+    "`n`n[runtime-extra]: CONTRIBUTING.md`n"
+  )
+  & $addMutation `
+    "skill-reference-style-definition" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $referenceStyleSkill
+
+  $rawHtmlSkill = (
+    $SkillText.TrimEnd([char]10) +
+    "`n`n<a href=`"CONTRIBUTING.md`">local link</a>`n"
+  )
+  & $addMutation `
+    "skill-raw-html-local-link" `
+    "[runtime-closure-skill-links]" `
+    $RuntimeManifestText `
+    $ReadmeText `
+    $rawHtmlSkill
+
+  # READMEはInstallからManual Use直前までのcanonical bytesと外側のdenylistを固定する。
+  $readmeByteDrift = & $replaceExactlyOnce `
+    $ReadmeText `
+    "Clone the repository:" `
+    "Clone this repository:" `
+    "readme-canonical-byte-drift"
+  & $addMutation `
+    "readme-canonical-byte-drift" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeByteDrift `
+    $SkillText
+
+  # hash helperのmodule qualification、terminating error、digest形状を個別に固定する。
+  $readmeUnqualifiedHashCommand = & $replaceExactlyOnce `
+    $ReadmeText `
+    "Microsoft.PowerShell.Utility\Get-FileHash" `
+    "Get-FileHash" `
+    "readme-hash-command-unqualified"
+  & $addMutation `
+    "readme-hash-command-unqualified" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeUnqualifiedHashCommand `
+    $SkillText
+
+  $lineContinuation = [string][char]96
+  $hashErrorActionNeedle = (
+    "      -Algorithm SHA256 $lineContinuation`n" +
+    "      -ErrorAction Stop`n"
+  )
+  $readmeHashErrorActionMissing = & $replaceExactlyOnce `
+    $ReadmeText `
+    $hashErrorActionNeedle `
+    "      -Algorithm SHA256`n" `
+    "readme-hash-erroraction-missing"
+  & $addMutation `
+    "readme-hash-erroraction-missing" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeHashErrorActionMissing `
+    $SkillText
+
+  $readmeHashDigestGateDisabled = & $replaceExactlyOnce `
+    $ReadmeText `
+    '  if ($hash -cnotmatch ''^[0-9A-F]{64}$'') {' `
+    '  if ($false) {' `
+    "readme-hash-digest-gate-disabled"
+  & $addMutation `
+    "readme-hash-digest-gate-disabled" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeHashDigestGateDisabled `
+    $SkillText
+
+  # canonical bytesを保ったまま外側containerで非表示にする反例を固定する。
+  $readmeHtmlCommentWrapped = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Install`n" `
+    "<!--`n## Install`n" `
+    "readme-html-comment-wrap-install"
+  $readmeHtmlCommentWrapped = & $replaceExactlyOnce `
+    $readmeHtmlCommentWrapped `
+    "## Manual Use`n" `
+    "## Manual Use`n-->`n" `
+    "readme-html-comment-wrap-install"
+  & $addMutation `
+    "readme-html-comment-wrap-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeHtmlCommentWrapped `
+    $SkillText
+
+  $readmeFenceWrapped = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Install`n" `
+    "~~~~`n## Install`n" `
+    "readme-top-level-fence-wrap-install"
+  $readmeFenceWrapped = & $replaceExactlyOnce `
+    $readmeFenceWrapped `
+    "## Manual Use`n" `
+    "## Manual Use`n~~~~`n" `
+    "readme-top-level-fence-wrap-install"
+  & $addMutation `
+    "readme-top-level-fence-wrap-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeFenceWrapped `
+    $SkillText
+
+  # raw heading allowlistで、render時だけ同名になる装飾やclosing hashを拒否する。
+  $readmeInlineSplitInstall = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n## In**stall**`n"
+  )
+  & $addMutation `
+    "readme-inline-split-semantic-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeInlineSplitInstall `
+    $SkillText
+
+  $readmeContainerAtxInstall = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n> ## In**stall**`n"
+  )
+  & $addMutation `
+    "readme-container-atx-semantic-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeContainerAtxInstall `
+    $SkillText
+
+  $readmeContainerSetextInstall = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n> Install`n> ---`n"
+  )
+  & $addMutation `
+    "readme-container-setext-semantic-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeContainerSetextInstall `
+    $SkillText
+
+  $readmeManualUseClosingHashBeforeInstall = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Install`n" `
+    "## Manual Use ##`n`n## Install`n" `
+    "readme-closing-hash-manual-use-before-install"
+  & $addMutation `
+    "readme-closing-hash-manual-use-before-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeManualUseClosingHashBeforeInstall `
+    $SkillText
+
+  # entity decodeを実装しない代わりに、outside character referenceを一律拒否する。
+  $readmeEntityRuntimeTokenOutside = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`nOutside token: ``C&#x6f;py-Item```n"
+  )
+  & $addMutation `
+    "readme-entity-runtime-token-outside-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeEntityRuntimeTokenOutside `
+    $SkillText
+
+  $readmePrefixedInstall = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Install`n" `
+    "x## Install`n" `
+    "readme-prefixed-canonical-install"
+  & $addMutation `
+    "readme-prefixed-canonical-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmePrefixedInstall `
+    $SkillText
+
+  $readmeMarkerOutside = (
+    "# runtime-closure-install:start`n" +
+    $ReadmeText
+  )
+  & $addMutation `
+    "readme-marker-outside-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeMarkerOutside `
+    $SkillText
+
+  $readmeTokenOutside = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`nOutside token: ``cOpY-iTeM```n"
+  )
+  & $addMutation `
+    "readme-mixed-case-copy-token-outside-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeTokenOutside `
+    $SkillText
+
+  $readmeRuntimeVariableOutside = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n" +
+    'Outside variable: `$RuNtImEfIlEs`' +
+    "`n"
+  )
+  & $addMutation `
+    "readme-mixed-case-runtime-variable-outside-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeRuntimeVariableOutside `
+    $SkillText
+
+  $readmeHashHelperOutside = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n" +
+    'Outside variable: `$GeTrEqUiReDfIlEsHa256`' +
+    "`n"
+  )
+  & $addMutation `
+    "readme-mixed-case-hash-helper-outside-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeHashHelperOutside `
+    $SkillText
+
+  $readmeClosingHashHeading = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n* * *`n  ## Install ##`n"
+  )
+  & $addMutation `
+    "readme-alternate-atx-closing-hash" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeClosingHashHeading `
+    $SkillText
+
+  $readmeSetextHeading = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`nInstall`n-------`n"
+  )
+  & $addMutation `
+    "readme-setext-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeSetextHeading `
+    $SkillText
+
+  $readmeInlineHeading = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n* `n  ## *Install*`n"
+  )
+  & $addMutation `
+    "readme-inline-format-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeInlineHeading `
+    $SkillText
+
+  $readmeEntityAtxHeading = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n## Inst&#x61;ll`n"
+  )
+  & $addMutation `
+    "readme-entity-atx-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeEntityAtxHeading `
+    $SkillText
+
+  $readmeHtmlCommentSplitAtxHeading = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n## Inst<!-- -->all`n"
+  )
+  & $addMutation `
+    "readme-html-comment-split-atx-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeHtmlCommentSplitAtxHeading `
+    $SkillText
+
+  $readmeRawHtmlHeading = (
+    $ReadmeText.TrimEnd([char]10) +
+    "`n`n<!-- prefix --><h2>Install</h2>`n"
+  )
+  & $addMutation `
+    "readme-prefixed-raw-html-h2-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeRawHtmlHeading `
+    $SkillText
+
+  $readmeManualUseMissing = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Manual Use`n" `
+    "## Manual Usage`n" `
+    "readme-manual-use-missing"
+  & $addMutation `
+    "readme-manual-use-missing" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeManualUseMissing `
+    $SkillText
+
+  $readmeManualUseDuplicate = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Manual Use`n" `
+    "## Manual Use`n## Manual Use`n" `
+    "readme-manual-use-duplicate"
+  & $addMutation `
+    "readme-manual-use-duplicate" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeManualUseDuplicate `
+    $SkillText
+
+  $readmeWithoutManualUse = & $replaceExactlyOnce `
+    $ReadmeText `
+    "## Manual Use`n" `
+    "" `
+    "readme-manual-use-before-install"
+  $readmeManualUseBeforeInstall = & $replaceExactlyOnce `
+    $readmeWithoutManualUse `
+    "## Install`n" `
+    "## Manual Use`n`n## Install`n" `
+    "readme-manual-use-before-install"
+  & $addMutation `
+    "readme-manual-use-before-install" `
+    "[runtime-closure-install]" `
+    $RuntimeManifestText `
+    $readmeManualUseBeforeInstall `
+    $SkillText
+
+  $readmeAstInvalid = & $replaceExactlyOnce `
+    $ReadmeText `
+    '$repoRoot = (Resolve-Path ".").Path' `
+    '$repoRoot = )' `
+    "readme-runtime-powershell-invalid"
+  & $addMutation `
+    "readme-runtime-powershell-invalid" `
+    "[runtime-closure-powershell]" `
+    $RuntimeManifestText `
+    $readmeAstInvalid `
+    $SkillText
+
+  # fixture数、入力変化、error prefixを同時に検査し、自己テストのfalse-greenを防ぐ。
+  if ($mutationCases.Count -ne $expectedMutationCount) {
+    Add-Error (
+      "[runtime-closure-self-test] Expected $expectedMutationCount " +
+      "mutation classes, found $($mutationCases.Count)."
+    )
+  }
+  foreach ($mutation in $mutationCases) {
+    $changedInputCount = 0
+    if ($mutation.Manifest -cne $RuntimeManifestText) {
+      $changedInputCount++
+    }
+    if ($mutation.Readme -cne $ReadmeText) {
+      $changedInputCount++
+    }
+    if ($mutation.Skill -cne $SkillText) {
+      $changedInputCount++
+    }
+    if ($changedInputCount -ne 1) {
+      Add-Error (
+        "[runtime-closure-self-test] Mutation '$($mutation.Name)' changed " +
+        "$changedInputCount inputs instead of exactly one."
+      )
+      continue
+    }
+
+    $mutationErrors = @(
+      Get-RuntimeClosureContractErrors `
+        -RuntimeManifestText $mutation.Manifest `
+        -ReadmeText $mutation.Readme `
+        -SkillText $mutation.Skill `
+        -PublicExampleManifest $PublicExampleManifest
+    )
+    $hasExpectedPrefix = @(
+      $mutationErrors |
+        Where-Object {
+          ([string]$_).StartsWith(
+            [string]$mutation.Expected,
+            [StringComparison]::Ordinal
+          )
+        }
+    ).Count -gt 0
+    if (-not $hasExpectedPrefix) {
+      Add-Error (
+        "[runtime-closure-self-test] Mutation '$($mutation.Name)' was not " +
+        "rejected with $($mutation.Expected). Actual: " +
+        "$($mutationErrors -join '; ')"
+      )
+    }
+  }
+
+  if ($errors.Count -eq $selfTestErrorCountBefore) {
+    Write-Output (
+      "Runtime closure strict contract self-test passed " +
+      "($($expectedPaths.Count) files, " +
+      "$($mutationCases.Count) hostile mutation classes rejected)."
+    )
+  }
+}
+
+function Assert-RuntimeClosureAtomicClaimFixture {
+  $fixtureRoot = Join-Path (
+    [IO.Path]::GetTempPath()
+  ) (
+    "bounded-playwright-runtime-claim-" +
+    [guid]::NewGuid().ToString("N")
+  )
+  $stagingPath = Join-Path $fixtureRoot "staging"
+  $targetPath = Join-Path $fixtureRoot "target"
+  $fixtureCreated = $false
+
+  try {
+    # preflight後に別installerがtargetを作った順序を、同一processで決定論的に再現する。
+    New-Item `
+      -ItemType Directory `
+      -Path $fixtureRoot `
+      -ErrorAction Stop | Out-Null
+    $fixtureCreated = $true
+    New-Item `
+      -ItemType Directory `
+      -Path $stagingPath `
+      -ErrorAction Stop | Out-Null
+    Set-Content `
+      -LiteralPath (Join-Path $stagingPath "payload.txt") `
+      -Value "staging-owner" `
+      -Encoding UTF8 `
+      -NoNewline `
+      -ErrorAction Stop
+
+    if (Test-Path -LiteralPath $targetPath) {
+      throw "Atomic claim fixture target unexpectedly exists before interleaving."
+    }
+    New-Item `
+      -ItemType Directory `
+      -Path $targetPath `
+      -ErrorAction Stop | Out-Null
+    $sentinelPath = Join-Path $targetPath "sentinel.txt"
+    Set-Content `
+      -LiteralPath $sentinelPath `
+      -Value "concurrent-owner" `
+      -Encoding UTF8 `
+      -NoNewline `
+      -ErrorAction Stop
+
+    $claimRejected = $false
+    try {
+      [IO.Directory]::Move($stagingPath, $targetPath)
+    } catch [IO.IOException] {
+      $claimRejected = $true
+    }
+    if (-not $claimRejected) {
+      Add-Error (
+        "[runtime-closure-atomic-fixture] " +
+        "Directory.Move did not reject the concurrent target."
+      )
+    }
+    if (-not (Test-Path -LiteralPath $sentinelPath -PathType Leaf) -or
+      (Get-Content -LiteralPath $sentinelPath -Raw -Encoding UTF8) -cne
+        "concurrent-owner") {
+      Add-Error (
+        "[runtime-closure-atomic-fixture] " +
+        "Concurrent target content was changed."
+      )
+    }
+    if (-not (Test-Path `
+        -LiteralPath (Join-Path $stagingPath "payload.txt") `
+        -PathType Leaf)) {
+      Add-Error (
+        "[runtime-closure-atomic-fixture] " +
+        "Rejected staging content was not retained for ownership verification."
+      )
+    }
+
+    # 同じpathを別regular directoryへ置換し、boolean所有判定では守れないraceを再現する。
+    $ownedStagingPath = Join-Path $fixtureRoot "owned-staging"
+    [IO.Directory]::Move($stagingPath, $ownedStagingPath)
+    New-Item `
+      -ItemType Directory `
+      -Path $stagingPath `
+      -ErrorAction Stop | Out-Null
+    $replacementSentinelPath = Join-Path $stagingPath "replacement-sentinel.txt"
+    Set-Content `
+      -LiteralPath $replacementSentinelPath `
+      -Value "replacement-owner" `
+      -Encoding UTF8 `
+      -NoNewline `
+      -ErrorAction Stop
+
+    # installerと同じく失敗pathを自動削除せず、identityを証明できないreplacementを保持する。
+    if (-not (Test-Path -LiteralPath $replacementSentinelPath -PathType Leaf)) {
+      Add-Error (
+        "[runtime-closure-atomic-fixture] " +
+        "Failure cleanup deleted a replacement staging directory."
+      )
+    }
+    if (-not (Test-Path `
+        -LiteralPath (Join-Path $ownedStagingPath "payload.txt") `
+        -PathType Leaf)) {
+      Add-Error (
+        "[runtime-closure-atomic-fixture] " +
+        "The originally created staging directory was not preserved."
+      )
+    }
+    if (-not (Test-Path -LiteralPath $sentinelPath -PathType Leaf) -or
+      (Get-Content -LiteralPath $sentinelPath -Raw -Encoding UTF8) -cne
+        "concurrent-owner") {
+      Add-Error (
+        "[runtime-closure-atomic-fixture] " +
+        "Failure retention changed the concurrent target."
+      )
+    }
+  } catch {
+    Add-Error (
+      "[runtime-closure-atomic-fixture] Fixture failed with " +
+      "$($_.Exception.GetType().Name)."
+    )
+  } finally {
+    # GUID配下だけを自己所有fixtureとして削除し、target外をcleanupしない。
+    if ($fixtureCreated -and
+      (Test-Path -LiteralPath $fixtureRoot -PathType Container)) {
+      Remove-Item `
+        -LiteralPath $fixtureRoot `
+        -Recurse `
+        -Force `
+        -ErrorAction SilentlyContinue
+    }
+  }
+
+  Write-Output "Runtime closure atomic claim and failure retention fixture passed."
+}
+
+function Assert-RuntimeClosureSourceMutationFixture {
+  $fixtureRoot = Join-Path (
+    [IO.Path]::GetTempPath()
+  ) (
+    "bounded-playwright-runtime-source-" +
+    [guid]::NewGuid().ToString("N")
+  )
+  $fixtureCreated = $false
+
+  try {
+    New-Item `
+      -ItemType Directory `
+      -Path $fixtureRoot `
+      -ErrorAction Stop | Out-Null
+    $fixtureCreated = $true
+    $sourcePath = Join-Path $fixtureRoot "source.txt"
+    $destinationPath = Join-Path $fixtureRoot "destination.txt"
+    $missingHashPath = Join-Path $fixtureRoot "missing.txt"
+
+    # missing sourceのhash取得がnullを返して続行せず、terminating errorになることを固定する。
+    $hashFailureRejected = $false
+    try {
+      Get-RequiredFileSha256 -LiteralPath $missingHashPath | Out-Null
+    } catch {
+      $hashFailureRejected = $true
+    }
+    if (-not $hashFailureRejected) {
+      Add-Error (
+        "[runtime-closure-source-fixture] " +
+        "A failed SHA-256 calculation did not fail closed."
+      )
+    }
+
+    Set-Content `
+      -LiteralPath $sourcePath `
+      -Value "trusted-before-copy" `
+      -Encoding UTF8 `
+      -NoNewline `
+      -ErrorAction Stop
+    $expectedHash = Get-RequiredFileSha256 -LiteralPath $sourcePath
+    Copy-Item `
+      -LiteralPath $sourcePath `
+      -Destination $destinationPath `
+      -ErrorAction Stop
+    if ((Get-RequiredFileSha256 -LiteralPath $destinationPath) -cne
+      $expectedHash) {
+      throw "Source mutation fixture initial copy changed unexpectedly."
+    }
+
+    # copy後・claim前の持続的なsource変更を再現し、preflight hashとの差で拒否する。
+    Set-Content `
+      -LiteralPath $sourcePath `
+      -Value "changed-after-copy" `
+      -Encoding UTF8 `
+      -NoNewline `
+      -ErrorAction Stop
+    $sourceMutationRejected = (
+      (Get-RequiredFileSha256 -LiteralPath $sourcePath) -cne $expectedHash
+    )
+    if (-not $sourceMutationRejected) {
+      Add-Error (
+        "[runtime-closure-source-fixture] " +
+        "A source mutation after copy was not rejected."
+      )
+    }
+  } catch {
+    Add-Error (
+      "[runtime-closure-source-fixture] Fixture failed with " +
+      "$($_.Exception.GetType().Name)."
+    )
+  } finally {
+    if ($fixtureCreated -and
+      (Test-Path -LiteralPath $fixtureRoot -PathType Container)) {
+      Remove-Item `
+        -LiteralPath $fixtureRoot `
+        -Recurse `
+        -Force `
+        -ErrorAction SilentlyContinue
+    }
+  }
+
+  Write-Output "Runtime closure hash failure and source mutation fixture passed."
 }
 
 function Get-JavaScriptLexicalMap {
@@ -2223,6 +3934,7 @@ function Assert-PublicExampleContractMutations {
 $publicExampleManifest = @(Get-PublicExampleManifest)
 $requiredFiles = @(
   "SKILL.md",
+  "runtime-files.txt",
   "README.md",
   "LICENSE",
   "CHANGELOG.md",
@@ -2282,6 +3994,34 @@ foreach ($skillReadinessError in $skillReadinessErrors) {
 if ($skillReadinessErrors.Count -eq 0) {
   Assert-SkillReadinessContractMutations `
     -SkillText (Get-RepoText "SKILL.md")
+}
+
+$missingRuntimeClosureInputs = @(
+  "runtime-files.txt",
+  "README.md"
+) | Where-Object {
+  -not (Test-Path -LiteralPath (Get-RepoPath $_) -PathType Leaf)
+}
+if ($missingRuntimeClosureInputs.Count -eq 0) {
+  $runtimeClosureContractErrors = @(
+    Get-RuntimeClosureContractErrors `
+      -RuntimeManifestText (Get-RepoText "runtime-files.txt") `
+      -ReadmeText (Get-RepoText "README.md") `
+      -SkillText (Get-RepoText "SKILL.md") `
+      -PublicExampleManifest $publicExampleManifest
+  )
+  foreach ($runtimeClosureContractError in $runtimeClosureContractErrors) {
+    Add-Error $runtimeClosureContractError
+  }
+  if ($runtimeClosureContractErrors.Count -eq 0) {
+    Assert-RuntimeClosureContractMutations `
+      -RuntimeManifestText (Get-RepoText "runtime-files.txt") `
+      -ReadmeText (Get-RepoText "README.md") `
+      -SkillText (Get-RepoText "SKILL.md") `
+      -PublicExampleManifest $publicExampleManifest
+    Assert-RuntimeClosureAtomicClaimFixture
+    Assert-RuntimeClosureSourceMutationFixture
+  }
 }
 
 $publicExamplePaths = @(
@@ -2475,6 +4215,7 @@ if (Test-Path -LiteralPath (Get-RepoPath "README.md") -PathType Leaf) {
       Add-Error "README.md is missing section: $requiredSection"
     }
   }
+
 }
 
 Assert-FileContains `
