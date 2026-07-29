@@ -37,8 +37,9 @@
 | T-027 | bounded server runbook の cleanup を直接process所有・例外安全・fail-closed にする | `AGENTS.md` §10 と独立レビュー | 高 | L | done (PR #24) |
 | T-028 | loading / empty / error state の合成report例と全公開exampleのreadiness契約を追加する | `SKILL.md` の状態確認要件と公開example検証のcoverage gap | 中 | M | done (PR #26) |
 | T-029 | 要件再定義ドラフトの確認済み事実を現行状態へ同期する | 2026-07-28 current-state drift | 中 | S | done |
-| T-030 | Playwright 推奨例の bounded readiness 契約を hostile mutation で回帰固定する | T-025 後の検査欠落と配布先copyのdrift | 高 | M | in_progress |
-| T-031 | Windows scanner process回帰のhost timing依存を意味論oracleとfinite hang guardへ分離する | PR #29 CI run `30373424494` | 高 | M | in_progress |
+| T-030 | Playwright 推奨例の bounded readiness 契約を hostile mutation で回帰固定する | T-025 後の検査欠落と配布先copyのdrift | 高 | M | done (PR #29 / active copy同期済み) |
+| T-031 | Windows scanner process回帰のhost timing依存を意味論oracleとfinite hang guardへ分離する | PR #29 CI run `30373424494` | 高 | M | done (PR #29) |
+| T-032 | README installを12-file runtime closureとdeterministic manifestへ閉じる | active copy同期で判明したrelative link欠落 | 高 | M | in_progress |
 
 ## 補足メモ
 
@@ -150,6 +151,27 @@
     elapsedは意味論oracleに使わず、有限hang guardだけに限定する。
   - **診断**: timeout / containment / tree / streams / started / sentinel / elapsedを
     path・環境値・例外文を含まない固定labelへ分離する。
+- **T-032 の実装契約（2026-07-29）**:
+  - **目的**: `SKILL.md`だけをcopyしてrelative link先を欠落させるREADME install例を廃止し、
+    `SKILL.md`とpublic-example manifestの11 pathを12-file runtime closureとして一括導入する。
+  - **影響**: 公開README、tracked runtime manifest、repository readiness検証だけを変更する。
+    active skill copy、production scanner、workflow、公開example本文の意味は変更しない。
+  - **検証**: runtime manifestは`SKILL.md`＋public-example manifestのpath集合・順序・件数へ
+    exactに閉じる。`SKILL.md`は公式Playwright 1行と公開example 11行からなるraw link
+    12行だけを、exactな順序・件数で許可する。未宣言のraw link、reference-style定義、
+    raw HTML linkは固定errorでfail closedにする。READMEはcanonical `## Install` sectionの
+    raw bytesを固定し、Install前のraw less-than / top-level fence、section外の
+    runtime token / character reference、exact allowlist外の`#`含有行、
+    container-prefixedを含むSetext-like underline / thematic breakと、code span /
+    escaped prose内も含むraw h1〜h6 tag-like token surfaceを拒否する。
+    埋め込みPowerShellをASTで構文検証し、
+    38 hostile mutationで限定surfaceを回帰固定する。install fixtureはportable path、
+    atomic target claim、fail-closedなSHA-256取得、source / staging再照合、失敗時の
+    staging保持、copy後source変更の拒否を検証する。
+  - **安全境界**: 合成repository textとOS temp配下の決定論fixtureだけを検査する。
+    install例はtrusted / quiescent cloneを前提とし、同一accountの悪意あるprocessが個々の
+    path openを精密にraceする脅威と任意Markdown / CommonMark parserは非目標。
+    active skill更新、deploy、OAuth、secret、実データ、有料サービスは利用しない。
 
 ## 外部レビュー指摘の台帳（2026-07-15 maxエフォート横断レビュー）
 

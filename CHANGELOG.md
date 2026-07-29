@@ -6,6 +6,18 @@ All notable changes to this project are recorded here.
 
 ### Added
 
+- `runtime-files.txt`を、`SKILL.md`とpublic-example manifestの11 pathから導出する
+  12-file runtime closureの正本として追加しました。repository readinessは
+  `SKILL.md`のraw linkを、公式Playwright 1行と公開example 11行のexactな順序・件数へ閉じ、
+  未宣言のraw link、reference-style定義、raw HTML linkをfail closedで拒否します。
+  READMEはcanonical `## Install` sectionのraw bytesを固定し、Install前のraw less-than /
+  top-level fence、section外のruntime token / character reference、exact allowlist外の
+  `#`含有行、container-prefixedを含むSetext-like underline / thematic breakと
+  code span / escaped prose内も含むraw h1〜h6 tag-like token surfaceを拒否します。
+  埋め込みPowerShellはASTでも構文検証します。任意Markdown / CommonMark parserは
+  実装せず、38 hostile mutationでこの限定surfaceだけを回帰固定しました。
+  install fixtureはportable path、atomic target claim、fail-closedなSHA-256取得、
+  source / staging再照合、失敗時のstaging保持、copy後source変更の拒否を検証します。
 - `SKILL.md`のPlaywright推奨例を、有限navigationとroute/state固有locator待機の
   順序付きcontractとして検証するrepository readiness checkとhostile mutationを追加しました。
   comment、quoted string、template literal、別fence内のdecoyをactive codeから除外し、

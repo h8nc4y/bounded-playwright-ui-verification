@@ -64,27 +64,229 @@ cd bounded-playwright-ui-verification
 Run the repository checks (see [Validation And Scan](#validation-and-scan))
 before copying the skill.
 
+`runtime-files.txt` is the deterministic runtime closure: `SKILL.md` plus the
+11 ordered paths in the existing public-example manifest. The same manifest
+already fixes the label, path, count, and publication section in both `SKILL.md`
+and this README. The required-file gate verifies that every declaration is a
+present leaf. Every manifest component must also be portable to Windows (no
+reserved device names, alternate data streams, wildcards, control characters,
+or trailing dots/spaces).
+
+The supported `SKILL.md` link surface is deliberately small: one exact official
+Playwright link followed by the 11 exact single-line public-example links.
+Unknown raw `](` lines, reference-style `]:` syntax, and raw HTML `<a>` / `<img>`
+link surfaces are unsupported and fail closed. Adding another runtime file is a
+reviewed public-manifest change, not automatic CommonMark link discovery.
+
+The repository check does not claim to parse arbitrary Markdown containers.
+Instead, it compares this complete `## Install` section through the fixed
+`## Manual Use` boundary with canonical text using ordinal equality. Alternate
+Install headings, runtime markers, and runtime copy/claim tokens outside this
+canonical block are unsupported lexical surfaces, including when they appear in
+code or comments. The canonical PowerShell block is also parsed with the
+PowerShell AST parser before acceptance.
+
 Manual install into a Codex-style skill directory:
 
 ```powershell
+# runtime-closure-install:start
+$repoRoot = (Resolve-Path ".").Path
+$manifestPath = Join-Path $repoRoot "runtime-files.txt"
+$runtimeFiles = @(Get-Content -LiteralPath $manifestPath -Encoding UTF8)
+if ($runtimeFiles.Count -ne 12) {
+  throw "Runtime manifest must contain exactly 12 files."
+}
+$runtimeFilesUnique = @($runtimeFiles | Sort-Object -Unique)
+if ($runtimeFilesUnique.Count -ne $runtimeFiles.Count) {
+  throw "Runtime manifest contains a duplicate path."
+}
+$assertPortableRuntimePath = {
+  param([string]$CandidatePath)
+
+  if ([string]::IsNullOrWhiteSpace($CandidatePath) -or
+    $CandidatePath -cne $CandidatePath.Trim() -or
+    [IO.Path]::IsPathRooted($CandidatePath) -or
+    $CandidatePath.Contains("\")) {
+    throw "Runtime manifest contains an unsafe path."
+  }
+  foreach ($candidateSegment in @($CandidatePath -split "/")) {
+    if ([string]::IsNullOrWhiteSpace($candidateSegment) -or
+      $candidateSegment -in @(".", "..") -or
+      $candidateSegment -match '[\x00-\x1F<>:"\\|?*]' -or
+      $candidateSegment -match '[. ]$' -or
+      $candidateSegment -match '^(?i:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³]) *(?:\..*)?$') {
+      throw "Runtime manifest contains an unsafe path."
+    }
+  }
+}
+
+$getRequiredFileSha256 = {
+  param([string]$LiteralPath)
+
+  # hash取得失敗をnull同士の一致として扱わず、必ず例外でfail closedにする。
+  $hashResults = @(
+    Microsoft.PowerShell.Utility\Get-FileHash `
+      -LiteralPath $LiteralPath `
+      -Algorithm SHA256 `
+      -ErrorAction Stop
+  )
+  if ($hashResults.Count -ne 1) {
+    throw "SHA-256 calculation did not return exactly one result."
+  }
+  $hash = [string]$hashResults[0].Hash
+  if ($hash -cnotmatch '^[0-9A-F]{64}$') {
+    throw "SHA-256 calculation returned an invalid digest."
+  }
+  return $hash
+}
+
 $skillRoot = if ($env:CODEX_HOME) {
   Join-Path $env:CODEX_HOME "skills"
 } else {
-  Join-Path $HOME ".codex\skills"
+  Join-Path (Join-Path $HOME ".codex") "skills"
+}
+$skillRootFullPath = [IO.Path]::GetFullPath($skillRoot)
+if (-not (Test-Path -LiteralPath $skillRootFullPath -PathType Container)) {
+  throw "Skill root does not exist: $skillRootFullPath"
+}
+$targetFullPath = [IO.Path]::GetFullPath(
+  (Join-Path $skillRootFullPath "bounded-playwright-ui-verification")
+)
+if (Test-Path -LiteralPath $targetFullPath) {
+  throw "Skill already exists: $targetFullPath"
+}
+$repoItem = Get-Item -LiteralPath $repoRoot -ErrorAction Stop
+if ($repoItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+  throw "Repository root must not be a reparse point."
 }
 
-$target = Join-Path $skillRoot "bounded-playwright-ui-verification"
-if (Test-Path -LiteralPath $target) {
-  throw "Skill already exists: $target"
+$repoBoundary = $repoRoot.TrimEnd([char]47, [char]92) +
+  [IO.Path]::DirectorySeparatorChar
+$stagingName = ".bounded-playwright-ui-verification.install-" +
+  [guid]::NewGuid().ToString("N")
+$stagingFullPath = [IO.Path]::GetFullPath(
+  (Join-Path $skillRootFullPath $stagingName)
+)
+$stagingBoundary = $stagingFullPath.TrimEnd([char]47, [char]92) +
+  [IO.Path]::DirectorySeparatorChar
+$copyPlan = foreach ($relativePath in $runtimeFiles) {
+  & $assertPortableRuntimePath $relativePath
+  $segments = @($relativePath -split "/")
+
+  $sourcePath = [IO.Path]::GetFullPath((Join-Path $repoRoot $relativePath))
+  $destinationPath = [IO.Path]::GetFullPath(
+    (Join-Path $stagingFullPath $relativePath)
+  )
+  if (-not $sourcePath.StartsWith(
+      $repoBoundary,
+      [StringComparison]::OrdinalIgnoreCase
+    ) -or
+    -not $destinationPath.StartsWith(
+      $stagingBoundary,
+      [StringComparison]::OrdinalIgnoreCase
+    )) {
+    throw "Runtime manifest path escaped its allowed root."
+  }
+
+  $sourceCursor = $repoRoot
+  foreach ($segment in $segments) {
+    $sourceCursor = Join-Path $sourceCursor $segment
+    $sourceItem = Get-Item -LiteralPath $sourceCursor -ErrorAction Stop
+    if ($sourceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw "Runtime manifest path contains a reparse point."
+    }
+  }
+  if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+    throw "Runtime manifest source is not a file."
+  }
+
+  [pscustomobject]@{
+    Source = $sourcePath
+    Destination = $destinationPath
+    Segments = $segments
+    ExpectedHash = & $getRequiredFileSha256 $sourcePath
+  }
 }
 
-New-Item -ItemType Directory -Path $target | Out-Null
-Copy-Item -LiteralPath ".\SKILL.md" -Destination (Join-Path $target "SKILL.md")
+try {
+  New-Item `
+    -ItemType Directory `
+    -Path $stagingFullPath `
+    -ErrorAction Stop | Out-Null
+  foreach ($copyItem in $copyPlan) {
+    $destinationDirectory = Split-Path -Parent $copyItem.Destination
+    New-Item `
+      -ItemType Directory `
+      -Path $destinationDirectory `
+      -Force `
+      -ErrorAction Stop | Out-Null
+    Copy-Item `
+      -LiteralPath $copyItem.Source `
+      -Destination $copyItem.Destination `
+      -ErrorAction Stop
+    if ($copyItem.ExpectedHash -cne
+      (& $getRequiredFileSha256 $copyItem.Destination)) {
+      throw "Runtime file copy failed its SHA-256 check."
+    }
+  }
+
+  # claim直前にsource/staging chainとpreflight hashを再検査し、通常の同時変更を拒否する。
+  $stagingItem = Get-Item -LiteralPath $stagingFullPath -ErrorAction Stop
+  if ($stagingItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    throw "Runtime staging root changed before atomic claim."
+  }
+  foreach ($copyItem in $copyPlan) {
+    $sourceCursor = $repoRoot
+    foreach ($segment in $copyItem.Segments) {
+      $sourceCursor = Join-Path $sourceCursor $segment
+      $sourceItem = Get-Item -LiteralPath $sourceCursor -ErrorAction Stop
+      if ($sourceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw "Runtime source changed after its preflight hash."
+      }
+    }
+    if (-not (Test-Path -LiteralPath $copyItem.Source -PathType Leaf) -or
+      (& $getRequiredFileSha256 $copyItem.Source) -cne
+        $copyItem.ExpectedHash) {
+      throw "Runtime source changed after its preflight hash."
+    }
+
+    $destinationCursor = $stagingFullPath
+    foreach ($segment in $copyItem.Segments) {
+      $destinationCursor = Join-Path $destinationCursor $segment
+      $destinationItem = Get-Item `
+        -LiteralPath $destinationCursor `
+        -ErrorAction Stop
+      if ($destinationItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw "Runtime staging path changed before atomic claim."
+      }
+    }
+    if (-not (Test-Path -LiteralPath $copyItem.Destination -PathType Leaf) -or
+      (& $getRequiredFileSha256 $copyItem.Destination) -cne
+        $copyItem.ExpectedHash) {
+      throw "Runtime staging path changed before atomic claim."
+    }
+  }
+  [IO.Directory]::Move($stagingFullPath, $targetFullPath)
+} catch {
+  Write-Warning (
+    "Install failed. Staging was not removed automatically; " +
+    "verify ownership before cleanup: $stagingFullPath"
+  )
+  throw
+}
+# runtime-closure-install:end
 ```
 
-If your agent runtime uses a different skill location, copy `SKILL.md` into the
-runtime's documented skill folder. Review local changes before overwriting an
-existing skill folder.
+If your agent runtime uses a different skill location, use the same
+manifest-driven copy with that documented skill root. The example refuses to
+overwrite an existing target, including one created after preflight. It copies
+into a unique sibling staging directory and atomically claims the final target
+only after the source and staging chains are revalidated against their preflight
+SHA-256 values. Run it only from a trusted, quiescent clone: a malicious local
+process racing individual path opens is outside this snippet's safety boundary.
+On failure it deliberately retains staging because a pathname alone cannot
+prove directory ownership; verify ownership before removing it. Review or remove
+an old installation separately instead of mixing versions.
 
 ## Manual Use
 
@@ -192,6 +394,21 @@ false-positive guards, binary standard streams, native Git batch bytes, process
 tree cleanup, first-call AST bootstrap/mutation/shadow/transitive bypasses,
 dangling Git metadata, fixed diagnostics, and Windows PowerShell 5.1 encoding;
 run it whenever the scanner changes.
+
+The runtime-closure self-test derives 12 paths from `SKILL.md` and the
+public-example manifest, requires the exact 12 raw `SKILL.md` link lines in
+fixed order and count, compares the canonical Install section bytes, and parses
+its PowerShell with the AST parser. The strict lexical subset also rejects any
+raw less-than sign or top-level fence delimiter before Install, character
+references outside the canonical section, and raw h1-through-h6 tag-like token
+surfaces even inside code spans or escaped prose. It also rejects Setext-like
+underline or thematic-break surfaces, including container-prefixed forms. Any
+outside hash-sign-bearing line must match the exact ATX-heading allowlist,
+order, and count. It rejects 38 representative mutations and uses synthetic
+filesystem fixtures for atomic claim,
+fail-closed SHA-256 acquisition, source/staging hash checks, failure retention,
+and source-mutation detection. This is a deliberately narrow supported surface,
+not an arbitrary Markdown or CommonMark parser.
 
 Use your agent runtime's skill validator as an additional check when one is
 available.
