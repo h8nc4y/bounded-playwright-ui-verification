@@ -39,7 +39,7 @@
 | T-029 | 要件再定義ドラフトの確認済み事実を現行状態へ同期する | 2026-07-28 current-state drift | 中 | S | done |
 | T-030 | Playwright 推奨例の bounded readiness 契約を hostile mutation で回帰固定する | T-025 後の検査欠落と配布先copyのdrift | 高 | M | done (PR #29 / active copy同期済み) |
 | T-031 | Windows scanner process回帰のhost timing依存を意味論oracleとfinite hang guardへ分離する | PR #29 CI run `30373424494` | 高 | M | done (PR #29) |
-| T-032 | README installを12-file runtime closureとdeterministic manifestへ閉じる | active copy同期で判明したrelative link欠落 | 高 | M | in_progress |
+| T-032 | README installを12-file runtime closureとdeterministic manifestへ閉じる | active copy同期で判明したrelative link欠落 | 高 | M | done (PR #30) |
 
 ## 補足メモ
 
