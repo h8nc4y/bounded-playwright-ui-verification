@@ -46,5 +46,10 @@ T-032の12-file runtime closure導入は完了した。
 ## オーナー境界と保留
 
 - active skill更新、deploy、OAuth、secret、実データ、課金操作は行わない。
-- `.review-019-runtime-closure-20260729`と`.skillspector-019-terminal.log`は、
-  cleanupがpolicy層で拒否されたため保持する。迂回削除しない。
+- T-032作業中、`.review-019-runtime-closure-20260729`と
+  `.skillspector-019-terminal.log`のcleanupはpolicy層で拒否された。拒否回数は正本上`未確認`で、
+  迂回や追加retryは行わない。
+- 2026-08-03 01:27 JSTのread-only確認時点では上記2 pathはいずれも不在だった。
+  削除の実行主体と時刻は`未確認`であり、cleanup成功の証拠として扱わない。
+- ignoredの`.claude/`と`.ui-verification/`は同確認時点で存在した。
+  内容は読まず、既存WIPとして削除・変更せず保持する。

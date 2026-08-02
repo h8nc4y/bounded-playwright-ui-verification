@@ -16,7 +16,7 @@ bounded な Playwright UI検証手順を提供する公開OSSのagent skill。
 
 ## 検証コマンド
 
-HANDOFF.md 記載の check:all 4ステップ(CIと同形)
+`AGENTS.md` §6 記載の check:all 4ステップ(CIと同形)
 
 ## 主要 gate(承認なしに越えない境界)
 
