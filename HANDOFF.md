@@ -5,15 +5,13 @@ PUBLIC repositoryの現況スナップショット。
 
 ## 現在の目標
 
-T-032でREADME installを、任意Markdown解析ではなく監査可能なstrict subsetへ閉じる。
-`SKILL.md`単体copyによるrelative link欠落を防ぎ、12-file runtime closureを原子的に導入する。
+T-032の12-file runtime closure導入は完了した。
+回答待ちの要件とオーナー承認待ちのscanner提案を越えず、次の安全な改善候補を選ぶ。
 
 ## スナップショット
 
-- branch：`fix/runtime-closure-install-contract`
-- base / HEAD：`bfb5c9f29b39e3dccbf8d19fd1d3dbfb47eb3793`
-- 変更6ファイル：`CHANGELOG.md`、`HANDOFF.md`、`README.md`、
-  `TASKS_BACKLOG.md`、`scripts/assert-oss-ready.ps1`、`runtime-files.txt`
+- T-032実装はPR #30でmainへmerge済み（merge commit
+  `6eb085360a4ac8c12033e854fc1c24351bdc771e`）。
 - runtime pathは`SKILL.md`＋public-example manifestの11 pathから導出する。
 - `SKILL.md`は公式Playwright 1行＋公開example 11行のraw linkをexactな順序・件数で許可する。
 - READMEはcanonical Install bytes、Install前raw less-than / fence、outside runtime
@@ -24,31 +22,34 @@ T-032でREADME installを、任意Markdown解析ではなく監査可能なstric
 
 ## 成功条件と実測
 
-- 27-mutation版の両PowerShell readinessとscannerはpassしたが、10:49 JSTの統合reviewで
-  hash fail-open、outer wrapper、semantic heading反例が見つかりNO-GOとなった。
-- 2026-07-29 11:18〜11:20 JST、38-mutation版のPowerShell 7 / 5.1 readinessはpassした。
-  runtime 12 files、hash failure / source mutation、atomic claim / failure retentionを確認した。
-- 11:18 JST、Windows PowerShell 5.1 scanner回帰suiteは175.7秒、再試行なしでpassし、
-  前後のscanner関連processは0件だった。
-- 11:21 JST、private-marker本体、Gitleaks、Semgrepはpassした。
-- 11:24 JST、最終read-only独立reviewはP0〜P3すべて0、`CLEARANCE=YES`だった。
-- Git stage / commit / push、PR / CI / mergeは`未確認`。
-- v1〜v11の任意CommonMark parser案は独立reviewで境界欠陥が続きNO-GOとなった。
-  この案は廃止し、上記strict subsetへ設計変更した。
+- 2026-07-29 11:33 JST、PR #30をmainへmergeした。PRの必須check
+  `Validate repository`はsuccessだった。
+- main push CI run `30417135131`は11:36 JSTにsuccessとなり、private marker scan、
+  scanner回帰、OSS readiness、whitespaceの4 stepがすべてpassした。
+- 13:02〜13:07 JST、merge commit上でWindows PowerShell 5.1のcheck:all 4ステップを
+  再実行し、すべてpassした。runtime 12 files、38 hostile mutation classes、
+  atomic claim / failure retention、hash failure / source mutationもreadiness内で確認した。
+- 同じpost-main確認時点でlocal mainとorigin/mainは一致し、working treeはcleanだった。
+- 実ブラウザ、active skill更新、deploy、OAuth、secret、実データ、課金操作は実施していない。
 
 ## 次の一手
 
-1. 変更6ファイルの差分をfreezeし、read-only独立reviewを通す。
-2. CLEAR後にPowerShell 5.1 focused gate、両host full gate、scannerとsecurity checksを直列実行する。
-3. 全証跡を同一treeへ同期し、commit、push、PR、必須CI、merge、post-main確認へ進む。
+1. D1〜D4 / O1〜O3へのオーナー回答後、T-018〜T-020 / T-022のblockedを再評価する。
+2. §14④の承認が得られた場合だけ、T-024のtracked-only走査モードを再評価する。
+3. 回答・承認が無い間は、製品要件を変えない公開docsのdriftや合成exampleの改善候補を監査する。
 
 ## 読み直さない範囲
 
 - v1〜v11のparser実装履歴、長いprobe秒数、解消済み反例は再読しない。
-- README canonical Installとscript templateは、同じ変更で同期する。
+- T-032の実装詳細は`TASKS_BACKLOG.md`の実装契約、PR #30、git履歴を参照する。
 
 ## オーナー境界と保留
 
 - active skill更新、deploy、OAuth、secret、実データ、課金操作は行わない。
-- `.review-019-runtime-closure-20260729`と`.skillspector-019-terminal.log`は、
-  cleanupがpolicy層で拒否されたため保持する。迂回削除しない。
+- T-032作業中、`.review-019-runtime-closure-20260729`と
+  `.skillspector-019-terminal.log`のcleanupはpolicy層で拒否された。拒否回数は正本上`未確認`で、
+  迂回や追加retryは行わない。
+- 2026-08-03 01:27 JSTのread-only確認時点では上記2 pathはいずれも不在だった。
+  削除の実行主体と時刻は`未確認`であり、cleanup成功の証拠として扱わない。
+- ignoredの`.claude/`と`.ui-verification/`は同確認時点で存在した。
+  内容は読まず、既存WIPとして削除・変更せず保持する。
